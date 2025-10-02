@@ -1,0 +1,81 @@
+@{
+    ViewData["Title"] = "Bulk Assign";
+}
+
+<h1>Bulk Assign Learning Walks</h1>
+
+<p class="text-muted">Assign multiple staff members to a single observer at once.</p>
+
+<hr />
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="row">
+    <div class="col-md-8">
+        <form asp-action="BulkAssign" method="post">
+            <input type="hidden" name="currentTerm" value="@ViewContext.HttpContext.Request.Query["term"]" />
+            <div class="form-group mb-3">
+                <label for="observerId" class="control-label">Observer</label>
+                <select name="observerId" id="observerId" class="form-control" asp-items="ViewBag.ObserverList">
+                    <option value="">-- Select Observer --</option>
+                </select>
+            </div>
+            
+            <div class="form-group mb-3">
+                <label for="staffIds" class="control-label">Staff Members</label>
+                <select name="staffIds" id="staffIds" class="form-control" asp-items="ViewBag.StaffList" multiple style="height: 300px;">
+                </select>
+                <small class="form-text text-muted">Hold Ctrl (or Cmd on Mac) to select multiple staff members</small>
+            </div>
+            
+            
+            <div class="form-group">
+                <input type="submit" value="Assign" class="btn btn-primary" />
+                <a asp-action="Index" class="btn btn-secondary">Back to List</a>
+            </div>
+        </form>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Tips</h5>
+            </div>
+            <div class="card-body">
+                <ul class="mb-0">
+                    <li>Select one observer who will conduct learning walks</li>
+                    <li>Select multiple staff members to be observed</li>
+                    <li>Existing assignments will be skipped automatically</li>
+                    <li>Staff cannot be assigned to observe themselves</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Optional: Add a select all/none functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const observerSelect = document.getElementById('observerId');
+            const staffSelect = document.getElementById('staffIds');
+            
+            // When observer changes, disable them in the staff list
+            observerSelect.addEventListener('change', function() {
+                const selectedObserverId = this.value;
+                Array.from(staffSelect.options).forEach(option => {
+                    option.disabled = option.value === selectedObserverId;
+                    if (option.disabled && option.selected) {
+                        option.selected = false;
+                    }
+                });
+            });
+        });
+    </script>
+}

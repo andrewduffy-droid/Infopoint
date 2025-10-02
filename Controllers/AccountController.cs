@@ -32,6 +32,32 @@ namespace InfoPoint.Controllers
             return View();
         }
 
+        [HttpGet]
+        [AllowAnonymous]
+        public async Task<IActionResult> SwitchAccount(string? returnUrl = null)
+        {
+            // Clear all authentication cookies
+            await HttpContext.SignOutAsync(IdentityConstants.ApplicationScheme);
+            await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
+            await HttpContext.SignOutAsync();
+            
+            // Clear the authentication cookie
+            Response.Cookies.Delete(".AspNetCore.Identity.Application");
+            Response.Cookies.Delete(".AspNetCore.Identity.External");
+            
+            // Redirect to force new Google login with account selection
+            var redirectUrl = Url.Action(nameof(ExternalLoginCallback), "Account", new { ReturnUrl = returnUrl });
+            var properties = new AuthenticationProperties { RedirectUri = redirectUrl };
+            
+            // Force account selection parameters
+            properties.SetParameter("prompt", "select_account");
+            properties.SetParameter("access_type", "online");
+            properties.SetParameter("max_age", "0");
+            properties.SetParameter("hd", "*");
+            
+            return Challenge(properties, GoogleDefaults.AuthenticationScheme);
+        }
+
         [HttpPost]
         [AllowAnonymous]
         public IActionResult ExternalLogin(string provider, string? returnUrl = null)
@@ -39,6 +65,24 @@ namespace InfoPoint.Controllers
             // Request a redirect to the external login provider
             var redirectUrl = Url.Action(nameof(ExternalLoginCallback), "Account", new { ReturnUrl = returnUrl });
             var properties = _signInManager.ConfigureExternalAuthenticationProperties(provider, redirectUrl);
+            
+            // Force account selection for Google OAuth
+            if (provider == GoogleDefaults.AuthenticationScheme)
+            {
+                // Force Google to show account chooser
+                properties.SetParameter("prompt", "select_account");
+                properties.SetParameter("access_type", "online");
+                
+                // Clear any login hint to prevent auto-selection
+                properties.Items.Remove("login_hint");
+                
+                // Add parameter to show account chooser even if only one account
+                properties.SetParameter("hd", "*");
+                
+                // Force re-authentication
+                properties.SetParameter("max_age", "0");
+            }
+            
             return Challenge(properties, provider);
         }
 
@@ -136,7 +180,12 @@ namespace InfoPoint.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Logout()
         {
+            // Sign out from the application
             await _signInManager.SignOutAsync();
+            
+            // Clear the external cookie to ensure Google account selection on next login
+            await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
+            
             _logger.LogInformation("User logged out.");
             return RedirectToAction(nameof(Login));
         }

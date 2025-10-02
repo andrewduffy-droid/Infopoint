@@ -1,0 +1,28 @@
+@model InfoPoint.Areas.LearningWalks.Models.LearningWalkAssignment
+
+@{
+    ViewData["Title"] = "Remove Assignment";
+}
+
+<h1>Remove Assignment</h1>
+
+<h3>Are you sure you want to remove this assignment?</h3>
+<div>
+    <hr />
+    <dl class="row">
+        <dt class="col-sm-2">Observer</dt>
+        <dd class="col-sm-10">@Model.Observer.FullName</dd>
+        
+        <dt class="col-sm-2">Staff Member</dt>
+        <dd class="col-sm-10">@Model.Staff.FullName</dd>
+        
+        <dt class="col-sm-2">Assigned Date</dt>
+        <dd class="col-sm-10">@Model.AssignedDate.ToString("dd/MM/yyyy")</dd>
+    </dl>
+    
+    <form asp-action="Delete">
+        <input type="hidden" asp-for="Id" />
+        <input type="submit" value="Remove" class="btn btn-danger" /> |
+        <a asp-action="Index" class="btn btn-secondary">Back to List</a>
+    </form>
+</div>

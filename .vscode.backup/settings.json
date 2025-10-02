@@ -1,0 +1,16 @@
+{
+    "omnisharp.useModernNet": false,
+    "omnisharp.dotNetCliPaths": [
+        "/opt/homebrew/opt/dotnet@8/bin/dotnet"
+    ],
+    "dotnetAcquisitionExtension.existingDotnetPath": [
+        {
+            "extensionId": "ms-dotnettools.csharp",
+            "path": "/opt/homebrew/opt/dotnet@8/libexec"
+        }
+    ],
+    "dotnet.dotnetPath": "/opt/homebrew/opt/dotnet@8/bin",
+    "dotnet.server.runtime": "/opt/homebrew/opt/dotnet@8/libexec",
+    "dotnet.server.path": "/opt/homebrew/opt/dotnet@8/libexec/dotnet",
+    "dotnet.preferredRuntime": "net8.0"
+}

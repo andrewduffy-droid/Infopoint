@@ -1,0 +1,193 @@
+@model IEnumerable<InfoPoint.Models.ApplicationUser>
+
+@{
+    ViewData["Title"] = "Manage Observers";
+}
+
+@section Styles {
+    <link href="~/css/learning-walks.css" rel="stylesheet" />
+}
+
+<!-- Page Header -->
+<div class="page-header">
+    <div class="container">
+        <h1>Observer Management</h1>
+        <p>Assign and manage staff members who can conduct learning walks</p>
+    </div>
+</div>
+
+<div class="container">
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-modern fade-in">
+            <strong>Success!</strong> @TempData["Success"]
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-modern fade-in">
+            <strong>Error!</strong> @TempData["Error"]
+        </div>
+    }
+
+    <div class="row">
+        <div class="col-lg-6 mb-4">
+            <div class="modern-card fade-in">
+                <div class="modern-card-header">
+                    <h5 class="modern-card-title">Current Observers</h5>
+                    <p class="modern-card-subtitle">Staff members who can conduct learning walks</p>
+                </div>
+                <div class="modern-card-body">
+                    @{
+                        var observers = Model.Where(u => u.IsObserver).ToList();
+                    }
+                    @if (observers.Any())
+                    {
+                        <div class="space-y-3">
+                            @foreach (var observer in observers)
+                            {
+                                <div class="d-flex align-items-center justify-content-between p-3 border rounded" style="background: var(--gray-50);">
+                                    <div class="d-flex align-items-center">
+                                        <div class="me-3">
+                                            <div class="bg-brand-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; font-size: 1rem; font-weight: 600;">
+                                                @{
+                                                    var observerName = observer?.FullName?.ToString() ?? "";
+                                                    var observerInitial = !string.IsNullOrEmpty(observerName) ? observerName[0] : 'U';
+                                                }
+                                                @observerInitial
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div class="font-weight-medium">@observer.FullName</div>
+                                            <div class="text-muted small">@observer.Email</div>
+                                        </div>
+                                    </div>
+                                    <form asp-action="ToggleObserver" method="post" class="d-inline">
+                                        <input type="hidden" name="userId" value="@observer.Id" />
+                                        <input type="hidden" name="makeObserver" value="false" />
+                                        <button type="submit" class="btn btn-outline-danger btn-sm btn-modern">
+                                            <i class="fas fa-times me-1"></i> Remove
+                                        </button>
+                                    </form>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="empty-state">
+                            <div class="empty-state-icon">👤</div>
+                            <h6>No observers assigned</h6>
+                            <p class="text-muted">Select staff from the available list to make them observers</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6 mb-4">
+            <div class="modern-card fade-in">
+                <div class="modern-card-header">
+                    <h5 class="modern-card-title">Available Staff</h5>
+                    <p class="modern-card-subtitle">Staff members who can be assigned as observers</p>
+                </div>
+                <div class="modern-card-body">
+                    @{
+                        var availableStaff = Model.Where(u => !u.IsObserver).ToList();
+                    }
+                    @if (availableStaff.Any())
+                    {
+                        <div class="space-y-3">
+                            @foreach (var staff in availableStaff)
+                            {
+                                <div class="d-flex align-items-center justify-content-between p-3 border rounded hover-lift" style="background: white; transition: all 0.15s ease;">
+                                    <div class="d-flex align-items-center">
+                                        <div class="me-3">
+                                            <div class="bg-gray-100 text-gray-600 rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; font-size: 1rem; font-weight: 600;">
+                                                @{
+                                                    var staffName = staff?.FullName?.ToString() ?? "";
+                                                    var staffInitial = !string.IsNullOrEmpty(staffName) ? staffName[0] : 'U';
+                                                }
+                                                @staffInitial
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div class="font-weight-medium">@staff.FullName</div>
+                                            <div class="text-muted small">@staff.Email</div>
+                                        </div>
+                                    </div>
+                                    <form asp-action="ToggleObserver" method="post" class="d-inline">
+                                        <input type="hidden" name="userId" value="@staff.Id" />
+                                        <input type="hidden" name="makeObserver" value="true" />
+                                        <button type="submit" class="btn btn-brand btn-sm btn-modern">
+                                            <i class="fas fa-plus me-1"></i> Make Observer
+                                        </button>
+                                    </form>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="empty-state">
+                            <div class="empty-state-icon">✅</div>
+                            <h6>All staff are observers</h6>
+                            <p class="text-muted">Every staff member is currently designated as an observer</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <a asp-action="Index" class="btn btn-outline-brand btn-modern hover-lift">
+            <i class="fas fa-arrow-left me-1"></i> Back to Learning Walks
+        </a>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Add smooth animations
+        document.addEventListener('DOMContentLoaded', function() {
+            // Animate cards on load
+            const cards = document.querySelectorAll('.fade-in');
+            cards.forEach((card, index) => {
+                setTimeout(() => {
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, index * 100);
+            });
+        });
+    </script>
+    
+    <style>
+        .fade-in {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s ease;
+        }
+        
+        .space-y-3 > * + * {
+            margin-top: 1rem;
+        }
+        
+        .bg-brand-primary {
+            background-color: var(--brand-primary) !important;
+        }
+        
+        .bg-gray-100 {
+            background-color: var(--gray-100) !important;
+        }
+        
+        .text-gray-600 {
+            color: var(--gray-600) !important;
+        }
+        
+        .font-weight-medium {
+            font-weight: 500;
+        }
+    </style>
+}

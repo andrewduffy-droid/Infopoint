@@ -1,6 +1,17 @@
 @{
-    ViewData["Title"] = "Learning Walks";
+    ViewData["Title"] = "My Learning Walks";
     Layout = "~/Views/Shared/_Layout.cshtml";
+    
+    var observerAssignments = ViewBag.ObserverAssignments as List<InfoPoint.Areas.LearningWalks.Models.LearningWalkAssignment> ?? new List<InfoPoint.Areas.LearningWalks.Models.LearningWalkAssignment>();
+    var observeeAssignments = ViewBag.ObserveeAssignments as List<InfoPoint.Areas.LearningWalks.Models.LearningWalkAssignment> ?? new List<InfoPoint.Areas.LearningWalks.Models.LearningWalkAssignment>();
+    var observeeFeedback = ViewBag.ObserveeFeedback as Dictionary<int, InfoPoint.Areas.LearningWalks.Models.LearningWalkFeedback> ?? new Dictionary<int, InfoPoint.Areas.LearningWalks.Models.LearningWalkFeedback>();
+    var submittedFeedback = ViewBag.SubmittedFeedback as HashSet<int> ?? new HashSet<int>();
+    var incompleteFeedback = ViewBag.IncompleteFeedback as HashSet<int> ?? new HashSet<int>();
+    var isBoth = (bool)(ViewBag.IsBoth ?? false);
+}
+
+@section Styles {
+    <link href="~/css/learning-walks.css" rel="stylesheet" />
 }
 
 <nav aria-label="breadcrumb">
@@ -10,24 +21,273 @@
     </ol>
 </nav>
 
+<!-- Page Header -->
+<div class="page-header">
+    <div class="container">
+        <h1>My Learning Walks</h1>
+        <p>Term @ViewBag.CurrentTerm assignments and observation tracking</p>
+    </div>
+</div>
+
 <div class="container">
-    <h1>Learning Walks Section</h1>
-    <p class="lead">Welcome to the Learning Walks management area.</p>
-    
-    <div class="row mt-4">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Learning Walks Features</h5>
-                    <p class="card-text">This section will contain features for managing learning walks, including:</p>
-                    <ul>
-                        <li>Schedule learning walks</li>
-                        <li>Record observations</li>
-                        <li>Generate reports</li>
-                        <li>Track progress</li>
-                    </ul>
+    <!-- Alerts -->
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-modern fade-in">
+            <strong>Success!</strong> @TempData["Success"]
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-modern fade-in">
+            <strong>Error!</strong> @TempData["Error"]
+        </div>
+    }
+
+    @if (isBoth)
+    {
+        <div class="alert alert-info alert-modern">
+            <h5><i class="fas fa-user-friends me-2"></i>Dual Role</h5>
+            <p class="mb-0">You are both an <strong>Observer</strong> and an <strong>Observee</strong>. You can conduct learning walks and view feedback on your own teaching.</p>
+        </div>
+    }
+
+    @if (!ViewBag.IsObserver && !observeeAssignments.Any())
+    {
+        <div class="alert alert-info alert-modern">
+            <h5><i class="fas fa-info-circle me-2"></i>No Learning Walk Access</h5>
+            <p class="mb-0">You don't have any learning walk assignments or observer privileges. Please contact an administrator if you need access.</p>
+        </div>
+    }
+
+    @if (ViewBag.IsObserver && observerAssignments.Any())
+    {
+        <!-- Observer Section - Assignments to Conduct -->
+        <div class="modern-card fade-in">
+            <div class="modern-card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="modern-card-title"><i class="fas fa-eye me-2"></i>As Observer - Conduct Learning Walks</h5>
+                        <p class="modern-card-subtitle">Staff members assigned for your observation</p>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">@observerAssignments.Count</div>
+                        <div class="stat-label">To Conduct</div>
+                    </div>
                 </div>
             </div>
+            <div class="table-responsive">
+                <table class="table table-modern mb-0">
+                    <thead>
+                        <tr>
+                            <th>Staff Member</th>
+                            <th>Assignment Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var assignment in observerAssignments)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="me-2">
+                                            <div class="bg-brand-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; font-size: 0.875rem; font-weight: 500;">
+                                                @{
+                                                    var fullName = assignment.Staff?.FullName ?? "";
+                                                    var initial = !string.IsNullOrEmpty(fullName) ? fullName[0] : 'U';
+                                                }
+                                                @initial
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div class="font-weight-medium">@assignment.Staff.FullName</div>
+                                            <div class="text-muted small">@assignment.Staff.Email</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="text-muted small">Assigned</div>
+                                    <div>@assignment.AssignedDate.ToString("MMM dd, yyyy")</div>
+                                </td>
+                                <td>
+                                    @if (submittedFeedback.Contains(assignment.Id))
+                                    {
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-check-circle me-1"></i>Completed
+                                        </span>
+                                    }
+                                    else if (incompleteFeedback.Contains(assignment.Id))
+                                    {
+                                        <span class="badge bg-warning">
+                                            <i class="fas fa-exclamation-circle me-1"></i>Incomplete
+                                        </span>
+                                        <div class="text-muted small mt-1">Needs retry</div>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">
+                                            <i class="fas fa-clock me-1"></i>Pending
+                                        </span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (submittedFeedback.Contains(assignment.Id))
+                                    {
+                                        <a asp-action="Conduct" asp-route-id="@assignment.Id" class="btn btn-success btn-sm hover-lift">
+                                            <i class="fas fa-eye me-1"></i>View/Edit
+                                        </a>
+                                    }
+                                    else if (incompleteFeedback.Contains(assignment.Id))
+                                    {
+                                        <a asp-action="Conduct" asp-route-id="@assignment.Id" class="btn btn-warning btn-sm hover-lift">
+                                            <i class="fas fa-redo me-1"></i>Retry Walk
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <a asp-action="Conduct" asp-route-id="@assignment.Id" class="btn btn-brand btn-sm hover-lift">
+                                            <i class="fas fa-clipboard-check me-1"></i>Conduct Walk
+                                        </a>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
         </div>
-    </div>
+    }
+
+    @if (observeeAssignments.Any())
+    {
+        <!-- Observee Section - View Feedback -->
+        <div class="modern-card fade-in @(ViewBag.IsObserver && observerAssignments.Any() ? "mt-4" : "")">
+            <div class="modern-card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="modern-card-title"><i class="fas fa-user me-2"></i>As Observee - My Learning Walk Feedback</h5>
+                        <p class="modern-card-subtitle">Observations conducted on your teaching</p>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">@observeeAssignments.Count</div>
+                        <div class="stat-label">Observations</div>
+                    </div>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-modern mb-0">
+                    <thead>
+                        <tr>
+                            <th>Observer</th>
+                            <th>Assignment Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var assignment in observeeAssignments)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="me-2">
+                                            <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; font-size: 0.875rem; font-weight: 500;">
+                                                @{
+                                                    var observerName = assignment.Observer?.FullName ?? "";
+                                                    var observerInitial = !string.IsNullOrEmpty(observerName) ? observerName[0] : 'O';
+                                                }
+                                                @observerInitial
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div class="font-weight-medium">@assignment.Observer.FullName</div>
+                                            <div class="text-muted small">@assignment.Observer.Email</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="text-muted small">Assigned</div>
+                                    <div>@assignment.AssignedDate.ToString("MMM dd, yyyy")</div>
+                                </td>
+                                <td>
+                                    @if (observeeFeedback.ContainsKey(assignment.Id))
+                                    {
+                                        var feedback = observeeFeedback[assignment.Id];
+                                        <span class="badge bg-info">Completed</span>
+                                        <div class="text-muted small mt-1">@feedback.SubmittedDate.ToString("MMM dd, yyyy")</div>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning">Pending</span>
+                                        <div class="text-muted small mt-1">Awaiting feedback</div>
+                                    }
+                                </td>
+                                <td>
+                                    @if (observeeFeedback.ContainsKey(assignment.Id))
+                                    {
+                                        <a asp-action="ViewFeedback" asp-route-id="@assignment.Id" class="btn btn-info btn-sm hover-lift">
+                                            <i class="fas fa-eye me-1"></i>View Feedback
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small">Feedback not available</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+
+    @if (ViewBag.IsObserver || observeeAssignments.Any())
+    {
+        <!-- Quick Stats -->
+        <div class="row mt-4">
+            @if (ViewBag.IsObserver)
+            {
+                <div class="col-md-4">
+                    <div class="stat-card-modern fade-in">
+                        <div class="stat-icon">
+                            <i class="fas fa-eye"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-number">@observerAssignments.Count</div>
+                            <div class="stat-label">To Observe</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stat-card-modern fade-in">
+                        <div class="stat-icon">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-number">@submittedFeedback.Count</div>
+                            <div class="stat-label">Completed</div>
+                        </div>
+                    </div>
+                </div>
+            }
+            @if (observeeAssignments.Any())
+            {
+                <div class="col-md-4">
+                    <div class="stat-card-modern fade-in">
+                        <div class="stat-icon">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-number">@observeeFeedback.Count</div>
+                            <div class="stat-label">Feedback Received</div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
 </div>

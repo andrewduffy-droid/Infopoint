@@ -1,0 +1,57 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build",
+            "command": "dotnet",
+            "type": "shell",
+            "args": [
+                "build",
+                "${workspaceFolder}/InfoPoint.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "build-net8",
+            "command": "/opt/homebrew/opt/dotnet@8/bin/dotnet",
+            "type": "shell",
+            "args": [
+                "build",
+                "${workspaceFolder}/InfoPoint.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile",
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "options": {
+                "env": {
+                    "DOTNET_ROOT": "/opt/homebrew/opt/dotnet@8/libexec",
+                    "PATH": "/opt/homebrew/opt/dotnet@8/bin:${env:PATH}"
+                }
+            }
+        },
+        {
+            "label": "run-net8",
+            "command": "${workspaceFolder}/run-with-dotnet8.sh",
+            "type": "shell",
+            "problemMatcher": [],
+            "group": {
+                "kind": "test",
+                "isDefault": false
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            }
+        }
+    ]
+}

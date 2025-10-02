@@ -1,0 +1,1084 @@
+@model InfoPoint.Areas.LearningWalks.Models.LearningWalkAssignment
+
+@{
+    ViewData["Title"] = "Conduct Learning Walk";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section Styles {
+    <link href="~/css/learning-walks.css" rel="stylesheet" />
+}
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Dashboard" asp-area="">Home</a></li>
+        <li class="breadcrumb-item"><a asp-controller="LearningWalks" asp-action="Index">Learning Walks</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Conduct Walk</li>
+    </ol>
+</nav>
+
+<!-- Page Header -->
+<div class="page-header">
+    <div class="container">
+        <h1>Learning Walk Observation</h1>
+        <p>Conducting observation for @Model.Staff.FullName</p>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Staff Information -->
+    <div class="modern-card mb-4 fade-in">
+        <div class="modern-card-body">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <div class="bg-brand-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; font-size: 1.25rem; font-weight: 500;">
+                                @{
+                                    var fullName = Model.Staff?.FullName ?? "";
+                                    var initial = !string.IsNullOrEmpty(fullName) ? fullName[0] : 'U';
+                                }
+                                @initial
+                            </div>
+                        </div>
+                        <div>
+                            <h5 class="mb-1">@Model.Staff.FullName</h5>
+                            <p class="text-muted mb-0">@Model.Staff.Email</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 text-md-end">
+                    <div class="text-muted small">Assignment Date</div>
+                    <div class="font-weight-medium">@Model.AssignedDate.ToString("MMM dd, yyyy")</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @{
+        var incompleteObservations = ViewBag.IncompleteObservations as List<InfoPoint.Areas.LearningWalks.Models.LearningWalkFeedback> ?? new List<InfoPoint.Areas.LearningWalks.Models.LearningWalkFeedback>();
+        var existingFeedback = ViewBag.ExistingFeedback as InfoPoint.Areas.LearningWalks.Models.LearningWalkFeedback;
+        var isEditingCompleted = existingFeedback != null && !existingFeedback.IsIncomplete;
+    }
+
+    @if (isEditingCompleted)
+    {
+        <div class="alert alert-success fade-in mb-4">
+            <i class="fas fa-check-circle me-2"></i>
+            <strong>Completed Learning Walk:</strong> This learning walk has been completed. You can view and edit the details below.
+        </div>
+    }
+
+    @if (incompleteObservations.Any())
+    {
+        @if (!isEditingCompleted)
+        {
+            <div class="alert alert-warning fade-in mb-4">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>Previous Incomplete Observations (@incompleteObservations.Count):</strong> Please attempt to complete a full observation if possible.
+            </div>
+        }
+
+        <div class="modern-card mb-4 fade-in">
+            <div class="modern-card-header">
+                <h5 class="modern-card-title">
+                    <i class="fas fa-history me-2"></i>@(isEditingCompleted ? "Observation Attempts History" : "Previous Incomplete Observation Attempts")
+                </h5>
+                <p class="modern-card-subtitle">@(isEditingCompleted ? "Previous incomplete attempts before successful observation" : "History of previous attempts for this learning walk")</p>
+            </div>
+            <div class="modern-card-body">
+                @foreach (var incomplete in incompleteObservations)
+                {
+                    <div class="incomplete-observation-card mb-3">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="text-muted small">Date</div>
+                                <div class="font-weight-medium">@incomplete.SubmittedDate.ToString("MMM dd, yyyy HH:mm")</div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-muted small">Lesson Attempted</div>
+                                <div class="font-weight-medium">@(incomplete.LessonDetails ?? "Not specified")</div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-muted small">Outcome</div>
+                                <div class="text-warning font-weight-medium">
+                                    <i class="fas fa-times-circle me-1"></i>@(incomplete.NoOutcomeDetails ?? "Issue reported")
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-muted small">Observer</div>
+                                <div class="font-weight-medium">@incomplete.SubmittedBy?.FullName</div>
+                            </div>
+                        </div>
+                        @if (!string.IsNullOrEmpty(incomplete.AdditionalComments))
+                        {
+                            <div class="mt-2 pt-2 border-top">
+                                <div class="text-muted small">Comments</div>
+                                <div class="text-muted">@incomplete.AdditionalComments</div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    <!-- Learning Walk Form -->
+    <form asp-action="Submit" method="post" class="fade-in" id="learningWalkForm">
+        <input type="hidden" name="assignmentId" value="@Model.Id" />
+        
+        <div class="modern-card">
+            <div class="modern-card-header">
+                <h5 class="modern-card-title">Learning Walk Observation Form</h5>
+                <p class="modern-card-subtitle">Complete all sections to submit your observation</p>
+            </div>
+            <div class="modern-card-body">
+                
+                <!-- Section 0: Lesson Selection -->
+                <div class="section-header">
+                    <h6><i class="fas fa-calendar-alt me-2"></i>Lesson Selection</h6>
+                </div>
+                
+                @{
+                    var staffTimetable = ViewBag.StaffTimetable as List<InfoPoint.Models.TimetableEntry> ?? new List<InfoPoint.Models.TimetableEntry>();
+                }
+                
+                <div class="mb-4">
+                    <label for="selectedLessonEventId" class="form-label form-label-modern">Select the lesson you are observing <span class="text-danger">*</span></label>
+                    @if (staffTimetable.Any())
+                    {
+                        <select name="selectedLessonEventId" id="selectedLessonEventId" class="form-select form-control-modern" required onchange="updateLessonDetails()">
+                            <option value="">Select a lesson...</option>
+                            @foreach (var lesson in staffTimetable)
+                            {
+                                var isSelected = existingFeedback?.SelectedLessonEventId == lesson.EventId;
+                                <option value="@lesson.EventId" 
+                                        data-lesson-details="@lesson.LessonDetails"
+                                        selected="@isSelected">
+                                    @lesson.DisplayText
+                                </option>
+                            }
+                        </select>
+                        <input type="hidden" name="lessonDetails" id="lessonDetails" value="@(existingFeedback?.LessonDetails ?? "")" />
+                    }
+                    else
+                    {
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>No timetable data available</strong><br>
+                            Unable to load lesson timetable for @Model.Staff.FullName. Please contact IT support to ensure the staff member's timetable data is available.
+                            <br><br>
+                            <em>Note: Staff Reference needed: The staff member needs a Staff Reference number linked to their account.</em>
+                        </div>
+                        <input type="hidden" name="selectedLessonEventId" value="" />
+                        <input type="hidden" name="lessonDetails" value="No timetable data available" />
+                    }
+                </div>
+
+                <!-- Section 1: Observation Timing -->
+                <div id="observationTimingSection" style="@(existingFeedback == null ? "display: none;" : "")">
+                    <div class="section-header">
+                        <h6><i class="fas fa-clock me-2"></i>What part of the lesson did you observe?</h6>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <div id="selectedLessonDisplay" class="lesson-display mb-3">
+                            @if (existingFeedback != null && !string.IsNullOrEmpty(existingFeedback.LessonDetails))
+                            {
+                                <strong>Observing:</strong> @existingFeedback.LessonDetails
+                            }
+                        </div>
+                        
+                        <div class="timing-button-group">
+                            <div class="btn-group w-100" role="group" aria-label="Lesson timing">
+                                <input type="radio" class="btn-check" name="observationTiming" id="timingStart" value="Start" 
+                                       @(existingFeedback?.ObservationTiming == "Start" ? "checked" : "") required>
+                                <label class="btn btn-outline-primary" for="timingStart">Start</label>
+
+                                <input type="radio" class="btn-check" name="observationTiming" id="timingMiddle" value="Middle" 
+                                       @(existingFeedback?.ObservationTiming == "Middle" ? "checked" : "") required>
+                                <label class="btn btn-outline-primary" for="timingMiddle">Middle</label>
+
+                                <input type="radio" class="btn-check" name="observationTiming" id="timingEnd" value="End" 
+                                       @(existingFeedback?.ObservationTiming == "End" ? "checked" : "") required>
+                                <label class="btn btn-outline-primary" for="timingEnd">End</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 2: Outcome -->
+                <div class="section-header">
+                    <h6><i class="fas fa-map-marker-alt me-2"></i>Outcome</h6>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="form-label form-label-modern">Was the teacher / lesson in the correct room? <span class="text-danger">*</span></label>
+                    
+                    <div class="outcome-button-group mb-3">
+                        <div class="btn-group w-100" role="group" aria-label="Room outcome">
+                            <input type="radio" class="btn-check" name="roomOutcome" id="outcomeYes" value="Yes" 
+                                   @(existingFeedback?.RoomOutcome == "Yes" ? "checked" : "") required onchange="toggleOutcomeDetails()">
+                            <label class="btn btn-outline-success" for="outcomeYes">Yes</label>
+
+                            <input type="radio" class="btn-check" name="roomOutcome" id="outcomeNo" value="No" 
+                                   @(existingFeedback?.RoomOutcome == "No" ? "checked" : "") required onchange="toggleOutcomeDetails()">
+                            <label class="btn btn-outline-danger" for="outcomeNo">No</label>
+                        </div>
+                    </div>
+                    
+                    <!-- Yes options (hidden by default) -->
+                    <div id="yesOptions" class="outcome-details" style="display: none;">
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle me-2"></i>
+                            <strong>Great!</strong> The lesson was found as expected.
+                        </div>
+                    </div>
+                    
+                    <!-- No options (hidden by default) -->
+                    <div id="noOptions" class="outcome-details" style="display: none;">
+                        <label class="form-label form-label-modern">What was the situation?</label>
+                        <div class="btn-group-vertical w-100" role="group" aria-label="No outcome details">
+                            <input type="radio" class="btn-check" name="noOutcomeDetails" id="noLesson" value="No lesson found"
+                                   @(existingFeedback?.NoOutcomeDetails == "No lesson found" ? "checked" : "") onchange="toggleIssueDetails()">
+                            <label class="btn btn-outline-warning" for="noLesson">
+                                <i class="fas fa-question-circle me-2"></i>No lesson found
+                            </label>
+
+                            <input type="radio" class="btn-check" name="noOutcomeDetails" id="noTeacher" value="Students present but no teacher"
+                                   @(existingFeedback?.NoOutcomeDetails == "Students present but no teacher" ? "checked" : "") onchange="toggleIssueDetails()">
+                            <label class="btn btn-outline-orange" for="noTeacher">
+                                <i class="fas fa-users me-2"></i>Students present but no teacher
+                            </label>
+
+                            <input type="radio" class="btn-check" name="noOutcomeDetails" id="differentRoom" value="Found lesson in a different room"
+                                   @(existingFeedback?.NoOutcomeDetails == "Found lesson in a different room" ? "checked" : "") onchange="toggleIssueDetails()">
+                            <label class="btn btn-outline-info" for="differentRoom">
+                                <i class="fas fa-exchange-alt me-2"></i>Found lesson in a different room
+                            </label>
+                        </div>
+                        
+                        <!-- Issue details comment box (hidden by default) -->
+                        <div id="issueDetailsSection" style="display: none;" class="mt-3">
+                            <label for="issueComments" class="form-label form-label-modern">Please provide additional details:</label>
+                            <textarea name="issueComments" id="issueComments" class="form-control form-control-modern" rows="3"
+                                      placeholder="E.g., Time arrived, what was observed, any students or staff spoken to...">@existingFeedback?.AdditionalComments</textarea>
+                            
+                            <div class="alert alert-info mt-3">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Note:</strong> After submitting this observation, you'll be able to conduct another learning walk for this teacher.
+                            </div>
+                            
+                            <button type="submit" class="btn btn-warning btn-modern hover-lift mt-3 w-100">
+                                <i class="fas fa-exclamation-triangle me-1"></i>Submit Incomplete Observation
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Teaching sections (hidden for incomplete observations) -->
+                <div id="teachingSections" style="display: none;">
+                
+                <!-- Section 3: Learning Walk Outcomes -->
+                <div class="section-header">
+                    <h6><i class="fas fa-chart-line me-2"></i>Learning Walk Outcomes</h6>
+                </div>
+                <div class="mb-4">
+                    <div class="outcomes-grid">
+                        <table class="table table-bordered outcomes-table">
+                            <thead>
+                                <tr>
+                                    <th class="assessment-area">Assessment Area</th>
+                                    <th class="practice-level">Working towards</th>
+                                    <th class="practice-level">Core Practice</th>
+                                    <th class="practice-level">Enhanced Practice</th>
+                                    <th class="practice-level">Expert Practice</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="assessment-area-name">
+                                        <i class="fas fa-tasks me-2 text-primary"></i>
+                                        Planning and Sequencing
+                                    </td>
+                                    <td class="practice-option">
+                                        <div class="form-check d-flex justify-content-center">
+                                            <input class="form-check-input practice-radio" type="radio" name="planningSequencing" 
+                                                   id="planningWorking" value="Working towards" @(existingFeedback?.PlanningSequencing == "Working towards" ? "checked" : "")>
+                                        </div>
+                                    </td>
+                                    <td class="practice-option">
+                                        <div class="form-check d-flex justify-content-center">
+                                            <input class="form-check-input practice-radio" type="radio" name="planningSequencing" 
+                                                   id="planningCore" value="Core" @(existingFeedback?.PlanningSequencing == "Core" ? "checked" : "")>
+                                        </div>
+                                    </td>
+                                    <td class="practice-option">
+                                        <div class="form-check d-flex justify-content-center">
+                                            <input class="form-check-input practice-radio" type="radio" name="planningSequencing" 
+                                                   id="planningEnhanced" value="Enhanced" @(existingFeedback?.PlanningSequencing == "Enhanced" ? "checked" : "")>
+                                        </div>
+                                    </td>
+                                    <td class="practice-option">
+                                        <div class="form-check d-flex justify-content-center">
+                                            <input class="form-check-input practice-radio" type="radio" name="planningSequencing" 
+                                                   id="planningExpert" value="Expert" @(existingFeedback?.PlanningSequencing == "Expert" ? "checked" : "")>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="assessment-area-name">
+                                        <i class="fas fa-book-open me-2 text-success"></i>
+                                        Learning Activities
+                                    </td>
+                                    <td class="practice-option">
+                                        <div class="form-check d-flex justify-content-center">
+                                            <input class="form-check-input practice-radio" type="radio" name="learningActivities" 
+                                                   id="activitiesWorking" value="Working towards" @(existingFeedback?.LearningActivities == "Working towards" ? "checked" : "")>
+                                        </div>
+                                    </td>
+                                    <td class="practice-option">
+                                        <div class="form-check d-flex justify-content-center">
+                                            <input class="form-check-input practice-radio" type="radio" name="learningActivities" 
+                                                   id="activitiesCore" value="Core" @(existingFeedback?.LearningActivities == "Core" ? "checked" : "")>
+                                        </div>
+                                    </td>
+                                    <td class="practice-option">
+                                        <div class="form-check d-flex justify-content-center">
+                                            <input class="form-check-input practice-radio" type="radio" name="learningActivities" 
+                                                   id="activitiesEnhanced" value="Enhanced" @(existingFeedback?.LearningActivities == "Enhanced" ? "checked" : "")>
+                                        </div>
+                                    </td>
+                                    <td class="practice-option">
+                                        <div class="form-check d-flex justify-content-center">
+                                            <input class="form-check-input practice-radio" type="radio" name="learningActivities" 
+                                                   id="activitiesExpert" value="Expert" @(existingFeedback?.LearningActivities == "Expert" ? "checked" : "")>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="assessment-area-name">
+                                        <i class="fas fa-check-double me-2 text-info"></i>
+                                        Assessment and Learning Checks
+                                    </td>
+                                    <td class="practice-option">
+                                        <div class="form-check d-flex justify-content-center">
+                                            <input class="form-check-input practice-radio" type="radio" name="assessmentChecks" 
+                                                   id="assessmentWorking" value="Working towards" @(existingFeedback?.AssessmentChecks == "Working towards" ? "checked" : "")>
+                                        </div>
+                                    </td>
+                                    <td class="practice-option">
+                                        <div class="form-check d-flex justify-content-center">
+                                            <input class="form-check-input practice-radio" type="radio" name="assessmentChecks" 
+                                                   id="assessmentCore" value="Core" @(existingFeedback?.AssessmentChecks == "Core" ? "checked" : "")>
+                                        </div>
+                                    </td>
+                                    <td class="practice-option">
+                                        <div class="form-check d-flex justify-content-center">
+                                            <input class="form-check-input practice-radio" type="radio" name="assessmentChecks" 
+                                                   id="assessmentEnhanced" value="Enhanced" @(existingFeedback?.AssessmentChecks == "Enhanced" ? "checked" : "")>
+                                        </div>
+                                    </td>
+                                    <td class="practice-option">
+                                        <div class="form-check d-flex justify-content-center">
+                                            <input class="form-check-input practice-radio" type="radio" name="assessmentChecks" 
+                                                   id="assessmentExpert" value="Expert" @(existingFeedback?.AssessmentChecks == "Expert" ? "checked" : "")>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="assessment-area-name">
+                                        <i class="fas fa-user-check me-2 text-warning"></i>
+                                        Behaviours and Attitudes
+                                    </td>
+                                    <td class="practice-option">
+                                        <div class="form-check d-flex justify-content-center">
+                                            <input class="form-check-input practice-radio" type="radio" name="behavioursAttitudes" 
+                                                   id="behavioursWorking" value="Working towards" @(existingFeedback?.BehavioursAttitudes == "Working towards" ? "checked" : "")>
+                                        </div>
+                                    </td>
+                                    <td class="practice-option">
+                                        <div class="form-check d-flex justify-content-center">
+                                            <input class="form-check-input practice-radio" type="radio" name="behavioursAttitudes" 
+                                                   id="behavioursCore" value="Core" @(existingFeedback?.BehavioursAttitudes == "Core" ? "checked" : "")>
+                                        </div>
+                                    </td>
+                                    <td class="practice-option">
+                                        <span class="text-muted">-</span>
+                                    </td>
+                                    <td class="practice-option">
+                                        <span class="text-muted">-</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Behaviours and Attitudes Checklist -->
+                <div class="mb-4">
+                    <div class="section-header">
+                        <h6><i class="fas fa-clipboard-check me-2"></i>Behaviours and Attitudes Checklist</h6>
+                    </div>
+                    <p class="text-muted small mb-3">Check all observed behaviours. Less than 5 checked = Working towards, 5 or more = Core Practice</p>
+                    
+                    <div class="behaviours-checklist">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input behaviour-checkbox" type="checkbox" name="behaviourChecks" value="arrive_on_time" id="arriveOnTime"
+                                           @(existingFeedback?.BehaviourChecks?.Contains("arrive_on_time") == true ? "checked" : "")>
+                                    <label class="form-check-label" for="arriveOnTime">
+                                        Learners arrive on time and/or effectively challenged
+                                    </label>
+                                </div>
+                                
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input behaviour-checkbox" type="checkbox" name="behaviourChecks" value="lanyards_worn" id="lanyardsWorn"
+                                           @(existingFeedback?.BehaviourChecks?.Contains("lanyards_worn") == true ? "checked" : "")>
+                                    <label class="form-check-label" for="lanyardsWorn">
+                                        Lanyards worn
+                                    </label>
+                                </div>
+                                
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input behaviour-checkbox" type="checkbox" name="behaviourChecks" value="items_removed" id="itemsRemoved"
+                                           @(existingFeedback?.BehaviourChecks?.Contains("items_removed") == true ? "checked" : "")>
+                                    <label class="form-check-label" for="itemsRemoved">
+                                        Hats, coats, earphones and bags removed
+                                    </label>
+                                </div>
+                                
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input behaviour-checkbox" type="checkbox" name="behaviourChecks" value="phone_silent" id="phoneSilent"
+                                           @(existingFeedback?.BehaviourChecks?.Contains("phone_silent") == true ? "checked" : "")>
+                                    <label class="form-check-label" for="phoneSilent">
+                                        Mobile phone on silent and away (if not being used for learning)
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input behaviour-checkbox" type="checkbox" name="behaviourChecks" value="no_food_drink" id="noFoodDrink"
+                                           @(existingFeedback?.BehaviourChecks?.Contains("no_food_drink") == true ? "checked" : "")>
+                                    <label class="form-check-label" for="noFoodDrink">
+                                        No food or drink
+                                    </label>
+                                </div>
+                                
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input behaviour-checkbox" type="checkbox" name="behaviourChecks" value="work_ready" id="workReady"
+                                           @(existingFeedback?.BehaviourChecks?.Contains("work_ready") == true ? "checked" : "")>
+                                    <label class="form-check-label" for="workReady">
+                                        Work ready - pens, notepads etc
+                                    </label>
+                                </div>
+                                
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input behaviour-checkbox" type="checkbox" name="behaviourChecks" value="desks_clear" id="desksClear"
+                                           @(existingFeedback?.BehaviourChecks?.Contains("desks_clear") == true ? "checked" : "")>
+                                    <label class="form-check-label" for="desksClear">
+                                        Desks clear of bags and non-study items
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="behaviour-summary mt-3">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <span id="behaviourCount">0</span> of 7 behaviours observed - 
+                                <strong id="behaviourRating">Working towards</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section: Learning Walk Feedback -->
+                <div class="section-header">
+                    <h6><i class="fas fa-edit me-2"></i>Learning Walk Feedback</h6>
+                </div>
+                
+                <div class="mb-4">
+                    <label for="learningWalkFeedback" class="form-label form-label-modern">Observer feedback for teacher <span class="text-danger">*</span></label>
+                    <div class="feedback-input-container">
+                        <textarea name="learningWalkFeedback" id="learningWalkFeedback" class="form-control form-control-modern" rows="6"
+                                  placeholder="Provide detailed feedback about the lesson observation, teaching practices, student engagement, and any recommendations for improvement...">@existingFeedback?.FeedbackText</textarea>
+                        
+                        <div class="feedback-actions mt-2">
+                            <button type="button" class="btn btn-outline-primary btn-sm" id="enhanceWithAI">
+                                <i class="fas fa-magic me-1"></i>Enhance with AI
+                            </button>
+                            <small class="text-muted ms-2">AI can help improve clarity and structure of your feedback</small>
+                        </div>
+                    </div>
+                </div>
+
+                </div>
+                <!-- End of teaching sections -->
+                
+                <!-- Action Buttons -->
+                <div class="d-flex justify-content-between" id="mainActionButtons">
+                    <a asp-controller="LearningWalks" asp-action="Index" class="btn btn-outline-secondary btn-modern">
+                        <i class="fas fa-arrow-left me-1"></i>Back to List
+                    </a>
+                    @if (isEditingCompleted)
+                    {
+                        <button type="submit" class="btn btn-success btn-modern hover-lift">
+                            <i class="fas fa-save me-1"></i>Update Learning Walk
+                        </button>
+                    }
+                    else
+                    {
+                        <button type="submit" class="btn btn-brand btn-modern hover-lift">
+                            <i class="fas fa-check me-1"></i>Submit Learning Walk
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        function updateLessonDetails() {
+            const select = document.getElementById('selectedLessonEventId');
+            const selectedOption = select.options[select.selectedIndex];
+            const timingSection = document.getElementById('observationTimingSection');
+            const lessonDisplay = document.getElementById('selectedLessonDisplay');
+            const lessonDetailsInput = document.getElementById('lessonDetails');
+            
+            if (selectedOption.value) {
+                const lessonDetails = selectedOption.getAttribute('data-lesson-details');
+                lessonDetailsInput.value = lessonDetails;
+                lessonDisplay.innerHTML = '<strong>Observing:</strong> ' + lessonDetails;
+                timingSection.style.display = 'block';
+                
+                // Smooth scroll to show the timing section
+                setTimeout(() => {
+                    timingSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }, 100);
+            } else {
+                lessonDetailsInput.value = '';
+                lessonDisplay.innerHTML = '';
+                timingSection.style.display = 'none';
+            }
+        }
+        
+        function toggleOutcomeDetails() {
+            const yesRadio = document.getElementById('outcomeYes');
+            const noRadio = document.getElementById('outcomeNo');
+            const yesOptions = document.getElementById('yesOptions');
+            const noOptions = document.getElementById('noOptions');
+            const teachingSections = document.getElementById('teachingSections');
+            const mainActionButtons = document.getElementById('mainActionButtons');
+            
+            if (yesRadio.checked) {
+                yesOptions.style.display = 'block';
+                noOptions.style.display = 'none';
+                // Clear no outcome details when Yes is selected
+                document.querySelectorAll('input[name="noOutcomeDetails"]').forEach(radio => {
+                    radio.checked = false;
+                });
+                // Show Learning Walk Outcomes for "Yes"
+                teachingSections.style.display = 'block';
+                mainActionButtons.style.display = 'flex';
+                updateRequiredFields(); // Update required fields
+                toggleIssueDetails(); // Reset issue details
+            } else if (noRadio.checked) {
+                yesOptions.style.display = 'none';
+                noOptions.style.display = 'block';
+                // Hide Learning Walk Outcomes initially for "No" until specific option is selected
+                teachingSections.style.display = 'none';
+                mainActionButtons.style.display = 'none';
+                updateRequiredFields(); // Update required fields
+            } else {
+                yesOptions.style.display = 'none';
+                noOptions.style.display = 'none';
+                teachingSections.style.display = 'none';
+                mainActionButtons.style.display = 'none';
+                updateRequiredFields(); // Update required fields
+            }
+        }
+        
+        function toggleIssueDetails() {
+            const noLessonRadio = document.getElementById('noLesson');
+            const noTeacherRadio = document.getElementById('noTeacher');
+            const differentRoomRadio = document.getElementById('differentRoom');
+            const issueDetailsSection = document.getElementById('issueDetailsSection');
+            const teachingSections = document.getElementById('teachingSections');
+            const mainActionButtons = document.getElementById('mainActionButtons');
+            const yesRadio = document.getElementById('outcomeYes');
+            
+            // Show issue details for "No lesson found" or "Students present but no teacher"
+            if (noLessonRadio.checked || noTeacherRadio.checked) {
+                issueDetailsSection.style.display = 'block';
+                teachingSections.style.display = 'none';
+                mainActionButtons.style.display = 'none';
+                updateRequiredFields(); // Update required fields
+            } else {
+                issueDetailsSection.style.display = 'none';
+                
+                // Show Learning Walk Outcomes only for "Yes" or "Found lesson in different room"
+                if (yesRadio.checked || differentRoomRadio.checked) {
+                    teachingSections.style.display = 'block';
+                    mainActionButtons.style.display = 'flex';
+                    updateRequiredFields(); // Update required fields
+                } else {
+                    teachingSections.style.display = 'none';
+                    mainActionButtons.style.display = 'none';
+                    updateRequiredFields(); // Update required fields
+                }
+            }
+        }
+        
+        function updateBehaviourRating() {
+            const checkboxes = document.querySelectorAll('.behaviour-checkbox');
+            const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+            const countElement = document.getElementById('behaviourCount');
+            const ratingElement = document.getElementById('behaviourRating');
+            const workingRadio = document.getElementById('behavioursWorking');
+            const coreRadio = document.getElementById('behavioursCore');
+            
+            countElement.textContent = checkedCount;
+            
+            if (checkedCount >= 5) {
+                ratingElement.textContent = 'Core Practice';
+                ratingElement.parentElement.className = 'alert alert-success';
+                coreRadio.checked = true;
+            } else {
+                ratingElement.textContent = 'Working towards';
+                ratingElement.parentElement.className = 'alert alert-warning';
+                workingRadio.checked = true;
+            }
+        }
+        
+        function updateRequiredFields() {
+            const teachingSections = document.getElementById('teachingSections');
+            const isVisible = teachingSections.style.display !== 'none';
+            
+            // Assessment fields
+            const assessmentFields = [
+                'input[name="planningSequencing"]',
+                'input[name="learningActivities"]', 
+                'input[name="assessmentChecks"]',
+                'input[name="behavioursAttitudes"]'
+            ];
+            
+            const feedbackField = document.getElementById('learningWalkFeedback');
+            
+            // Set required attribute based on visibility
+            assessmentFields.forEach(selector => {
+                document.querySelectorAll(selector).forEach(input => {
+                    if (isVisible) {
+                        input.setAttribute('required', '');
+                    } else {
+                        input.removeAttribute('required');
+                    }
+                });
+            });
+            
+            // Feedback field should be required when sections are visible
+            if (isVisible) {
+                feedbackField.setAttribute('required', '');
+            } else {
+                feedbackField.removeAttribute('required');
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            // Animate cards on load
+            const cards = document.querySelectorAll('.fade-in');
+            cards.forEach((card, index) => {
+                setTimeout(() => {
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, index * 100);
+            });
+            
+            // Initialize lesson details if editing
+            updateLessonDetails();
+            
+            // Initialize outcome details if editing
+            toggleOutcomeDetails();
+            toggleIssueDetails();
+            
+            // Initialize behaviour rating and add event listeners
+            const behaviourCheckboxes = document.querySelectorAll('.behaviour-checkbox');
+            behaviourCheckboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', updateBehaviourRating);
+            });
+            updateBehaviourRating(); // Initialize on page load
+            
+            // Initialize required fields based on current visibility
+            updateRequiredFields();
+            
+            // Form validation
+            const form = document.querySelector('form');
+            form.addEventListener('submit', function(e) {
+                const lessonSelect = document.querySelector('select[name="selectedLessonEventId"]');
+                const timingRadios = document.querySelectorAll('input[name="observationTiming"]');
+                const roomOutcomeRadios = document.querySelectorAll('input[name="roomOutcome"]');
+                const noOutcomeRadios = document.querySelectorAll('input[name="noOutcomeDetails"]');
+                const planningRadios = document.querySelectorAll('input[name="planningSequencing"]');
+                const activitiesRadios = document.querySelectorAll('input[name="learningActivities"]');
+                const assessmentRadios = document.querySelectorAll('input[name="assessmentChecks"]');
+                
+                // Check if lesson is selected (if timetable data is available)
+                if (lessonSelect && !lessonSelect.value) {
+                    e.preventDefault();
+                    alert('Please select a lesson before submitting.');
+                    lessonSelect.focus();
+                    return;
+                }
+                
+                // Check if observation timing is selected (if lesson is selected)
+                if (lessonSelect && lessonSelect.value) {
+                    let timingSelected = false;
+                    timingRadios.forEach(radio => {
+                        if (radio.checked) timingSelected = true;
+                    });
+                    
+                    if (!timingSelected) {
+                        e.preventDefault();
+                        alert('Please select what part of the lesson you observed.');
+                        document.getElementById('timingStart').focus();
+                        return;
+                    }
+                }
+                
+                // Check room outcome
+                let roomOutcomeSelected = false;
+                roomOutcomeRadios.forEach(radio => {
+                    if (radio.checked) roomOutcomeSelected = true;
+                });
+                
+                if (!roomOutcomeSelected) {
+                    e.preventDefault();
+                    alert('Please indicate whether the teacher/lesson was in the correct room.');
+                    document.getElementById('outcomeYes').focus();
+                    return;
+                }
+                
+                // Check learning walk feedback
+                const feedbackTextarea = document.getElementById('learningWalkFeedback');
+                if (!feedbackTextarea.value.trim()) {
+                    e.preventDefault();
+                    alert('Please provide learning walk feedback for the teacher.');
+                    feedbackTextarea.focus();
+                    return;
+                }
+                
+                // If "No" is selected for room outcome, check if details are provided
+                const noSelected = document.getElementById('outcomeNo').checked;
+                if (noSelected) {
+                    let noDetailsSelected = false;
+                    noOutcomeRadios.forEach(radio => {
+                        if (radio.checked) noDetailsSelected = true;
+                    });
+                    
+                    if (!noDetailsSelected) {
+                        e.preventDefault();
+                        alert('Please select what situation you found when the lesson was not in the correct room.');
+                        document.getElementById('noLesson').focus();
+                        return;
+                    }
+                }
+                
+                // Only check learning walk outcomes if not submitting an incomplete observation
+                const isIncompleteObservation = (document.getElementById('noLesson').checked || 
+                                                 document.getElementById('noTeacher').checked);
+                
+                if (!isIncompleteObservation) {
+                    // Check planning and sequencing
+                    let planningSelected = false;
+                    planningRadios.forEach(radio => {
+                        if (radio.checked) planningSelected = true;
+                    });
+                    
+                    if (!planningSelected) {
+                        e.preventDefault();
+                        alert('Please select a practice level for Planning and Sequencing.');
+                        document.getElementById('planningCore').focus();
+                        return;
+                    }
+                    
+                    // Check learning activities
+                    let activitiesSelected = false;
+                    activitiesRadios.forEach(radio => {
+                        if (radio.checked) activitiesSelected = true;
+                    });
+                    
+                    if (!activitiesSelected) {
+                        e.preventDefault();
+                        alert('Please select a practice level for Learning Activities.');
+                        document.getElementById('activitiesCore').focus();
+                        return;
+                    }
+                    
+                    // Check assessment and learning checks
+                    let assessmentSelected = false;
+                    assessmentRadios.forEach(radio => {
+                        if (radio.checked) assessmentSelected = true;
+                    });
+                    
+                    if (!assessmentSelected) {
+                        e.preventDefault();
+                        alert('Please select a practice level for Assessment and Learning Checks.');
+                        document.getElementById('assessmentCore').focus();
+                        return;
+                    }
+                }
+            });
+        });
+    </script>
+    
+    <style>
+        .fade-in {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s ease;
+        }
+        
+        .section-header {
+            border-bottom: 1px solid var(--gray-200);
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+        }
+        
+        .section-header h6 {
+            color: var(--brand-primary);
+            margin-bottom: 0;
+            font-weight: 600;
+        }
+        
+        .form-check-label {
+            font-size: 0.9rem;
+        }
+        
+        .form-check {
+            margin-bottom: 0.5rem;
+        }
+        
+        .lesson-display {
+            background: var(--brand-primary-subtle);
+            padding: 1rem;
+            border-radius: var(--radius);
+            border-left: 4px solid var(--brand-primary);
+            font-size: 0.95rem;
+        }
+        
+        .observation-timing-options {
+            display: grid;
+            gap: 1rem;
+        }
+        
+        /* Button group styling */
+        .timing-button-group .btn-group {
+            gap: 0;
+        }
+        
+        .timing-button-group .btn {
+            flex: 1;
+            font-weight: 500;
+            padding: 0.75rem 1rem;
+        }
+        
+        .outcome-button-group .btn-group {
+            gap: 0;
+        }
+        
+        .outcome-button-group .btn {
+            flex: 1;
+            font-weight: 500;
+            padding: 0.75rem 1rem;
+        }
+        
+        /* Orange button variant */
+        .btn-outline-orange {
+            color: #fd7e14;
+            border-color: #fd7e14;
+            background-color: transparent;
+        }
+        
+        .btn-outline-orange:hover {
+            color: #fff;
+            background-color: #fd7e14;
+            border-color: #fd7e14;
+        }
+        
+        .btn-check:checked + .btn-outline-orange {
+            color: #fff;
+            background-color: #fd7e14;
+            border-color: #fd7e14;
+        }
+        
+        /* Outcome details styling */
+        .outcome-details {
+            margin-top: 1rem;
+            transition: all 0.3s ease-in-out;
+        }
+        
+        .btn-group-vertical .btn {
+            margin-bottom: 0.5rem;
+            text-align: left;
+            padding: 0.75rem 1rem;
+        }
+        
+        .btn-group-vertical .btn:last-child {
+            margin-bottom: 0;
+        }
+        
+        /* Learning Walk Outcomes Table */
+        .outcomes-table {
+            border-color: var(--gray-200);
+            margin-bottom: 0;
+        }
+        
+        .outcomes-table thead {
+            background-color: var(--brand-primary-subtle);
+        }
+        
+        .outcomes-table th {
+            border-color: var(--gray-200);
+            color: var(--brand-primary);
+            font-weight: 600;
+            text-align: center;
+            padding: 1rem;
+        }
+        
+        .outcomes-table th.assessment-area {
+            text-align: left;
+            width: 40%;
+        }
+        
+        .outcomes-table th.practice-level {
+            width: 15%;
+        }
+        
+        .outcomes-table td {
+            vertical-align: middle;
+            border-color: var(--gray-200);
+            padding: 1rem;
+        }
+        
+        .assessment-area-name {
+            font-weight: 500;
+            color: var(--gray-800);
+        }
+        
+        .practice-option {
+            text-align: center;
+        }
+        
+        .practice-radio {
+            cursor: pointer;
+            transform: scale(1.2);
+        }
+        
+        .practice-radio:checked {
+            background-color: var(--brand-primary);
+            border-color: var(--brand-primary);
+        }
+        
+        .outcomes-table tbody tr:hover {
+            background-color: var(--gray-50);
+        }
+        
+        .form-check-input {
+            margin-top: 0.25rem;
+        }
+        
+        .form-check-label {
+            cursor: pointer;
+            width: 100%;
+        }
+        
+        /* Learning Walk Feedback Styling */
+        .feedback-input-container {
+            position: relative;
+        }
+        
+        .feedback-input-container textarea {
+            min-height: 150px;
+            resize: vertical;
+        }
+        
+        .feedback-actions {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+        }
+        
+        .feedback-actions .btn {
+            transition: all 0.2s ease;
+        }
+        
+        .feedback-actions .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        #enhanceWithAI {
+            background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+        }
+        
+        #enhanceWithAI:hover {
+            background: linear-gradient(45deg, #5a6fd8 0%, #6a4190 100%);
+            color: white;
+        }
+        
+        /* Behaviours and Attitudes Styling */
+        .behaviours-checklist {
+            background: var(--gray-50);
+            padding: 1.5rem;
+            border-radius: var(--radius);
+            border: 1px solid var(--gray-200);
+        }
+        
+        .behaviour-checkbox {
+            transform: scale(1.1);
+            margin-right: 0.5rem;
+        }
+        
+        .behaviour-checkbox:checked {
+            background-color: var(--brand-primary);
+            border-color: var(--brand-primary);
+        }
+        
+        .behaviours-checklist .form-check-label {
+            font-size: 0.95rem;
+            line-height: 1.4;
+            cursor: pointer;
+        }
+        
+        .behaviour-summary {
+            border-top: 1px solid var(--gray-200);
+            padding-top: 1rem;
+        }
+        
+        .behaviour-summary .alert {
+            margin-bottom: 0;
+            transition: all 0.3s ease;
+        }
+
+        /* Incomplete Observation Card Styling */
+        .incomplete-observation-card {
+            background: var(--gray-50);
+            padding: 1rem;
+            border-radius: var(--radius);
+            border-left: 4px solid #ffc107;
+        }
+
+        .incomplete-observation-card:last-child {
+            margin-bottom: 0 !important;
+        }
+
+        .incomplete-observation-card .font-weight-medium {
+            font-weight: 500;
+        }
+    </style>
+}

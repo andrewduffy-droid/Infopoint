@@ -1,10 +1,8 @@
 {
   "profiles": {
-    "InfoPoint": {
+    "Default": {
       "commandName": "Project",
       "launchBrowser": true,
-      "hotReloadProfile": "aspnetcore",
-      "applicationUrl": "http://localhost:5167",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }

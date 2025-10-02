@@ -13,6 +13,11 @@
                 {
                     <div class="alert alert-danger" role="alert">
                         @TempData["ErrorMessage"]
+                        @if (TempData["ErrorMessage"].ToString().Contains("Access blocked") || TempData["ErrorMessage"].ToString().Contains("Authorization Error"))
+                        {
+                            <hr />
+                            <small>If you're signed in with the wrong Google account, <a href="https://accounts.google.com/logout" target="_blank">click here to sign out of Google</a> first, then try again.</small>
+                        }
                     </div>
                 }
                 
@@ -31,8 +36,34 @@
                     <div class="mt-4">
                         <small class="text-muted">Only @@g.bdc.ac.uk email addresses are allowed</small>
                     </div>
+                    
+                    <div class="mt-3">
+                        <a asp-controller="Account" asp-action="SwitchAccount" asp-route-returnUrl="@ViewData["ReturnUrl"]" class="btn btn-link btn-sm" id="switchAccountBtn">
+                            <i class="bi bi-arrow-repeat"></i> Sign in with a different Google account
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        // Clear Google session to force account selection
+        document.addEventListener('DOMContentLoaded', function() {
+            // Clear session storage which Google uses
+            if (window.sessionStorage) {
+                sessionStorage.clear();
+            }
+            
+            // Add click handler for switch account button
+            document.getElementById('switchAccountBtn')?.addEventListener('click', function(e) {
+                // Clear local storage too
+                if (window.localStorage) {
+                    localStorage.clear();
+                }
+            });
+        });
+    </script>
+}

@@ -1,0 +1,644 @@
+@model InfoPoint.Areas.LearningWalks.Models.LearningWalkFeedback
+
+@{
+    ViewData["Title"] = "Learning Walk Feedback";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var assignment = ViewBag.Assignment as InfoPoint.Areas.LearningWalks.Models.LearningWalkAssignment;
+    var isAdminView = ViewBag.IsAdminView ?? false;
+}
+
+@section Styles {
+    <link href="~/css/learning-walks.css" rel="stylesheet" />
+}
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Dashboard" asp-area="">Home</a></li>
+        @if (isAdminView)
+        {
+            <li class="breadcrumb-item"><a asp-area="LearningWalks" asp-controller="Admin" asp-action="Index">Admin Panel</a></li>
+        }
+        else
+        {
+            <li class="breadcrumb-item"><a asp-controller="LearningWalks" asp-action="Index">Learning Walks</a></li>
+        }
+        <li class="breadcrumb-item active" aria-current="page">Feedback</li>
+    </ol>
+</nav>
+
+<!-- Page Header -->
+<div class="page-header">
+    <div class="container">
+        <h1>Learning Walk Feedback</h1>
+        <p>Observation feedback for your teaching practice</p>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Assignment Information -->
+    <div class="modern-card mb-4 fade-in">
+        <div class="modern-card-body">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; font-size: 1.25rem; font-weight: 500;">
+                                @{
+                                    var observerName = assignment?.Observer?.FullName ?? "";
+                                    var observerInitial = !string.IsNullOrEmpty(observerName) ? observerName[0] : 'O';
+                                }
+                                @observerInitial
+                            </div>
+                        </div>
+                        <div>
+                            <h5 class="mb-1">Observer: @assignment?.Observer?.FullName</h5>
+                            <p class="text-muted mb-0">@assignment?.Observer?.Email</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-muted small">Assignment Date</div>
+                    <div class="font-weight-medium">@assignment?.AssignedDate.ToString("MMM dd, yyyy")</div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-muted small">Feedback Submitted</div>
+                    <div class="font-weight-medium">@Model.SubmittedDate.ToString("MMM dd, yyyy")</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Incomplete Observations History -->
+    @{
+        var incompleteObservations = ViewBag.IncompleteObservations as List<InfoPoint.Areas.LearningWalks.Models.LearningWalkFeedback> ?? new List<InfoPoint.Areas.LearningWalks.Models.LearningWalkFeedback>();
+    }
+
+    @if (incompleteObservations.Any())
+    {
+        <div class="modern-card mb-4 fade-in">
+            <div class="modern-card-header">
+                <h5 class="modern-card-title">
+                    <i class="fas fa-history me-2"></i>Observation Attempts History
+                </h5>
+                <p class="modern-card-subtitle">Previous incomplete observation attempts</p>
+            </div>
+            <div class="modern-card-body">
+                <div class="alert alert-info mb-3">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Note:</strong> @incompleteObservations.Count incomplete observation attempt@(incompleteObservations.Count > 1 ? "s were" : " was") made before the successful observation below.
+                </div>
+                @foreach (var incomplete in incompleteObservations)
+                {
+                    <div class="incomplete-observation-card mb-3">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="text-muted small">Date & Time</div>
+                                <div class="font-weight-medium">@incomplete.SubmittedDate.ToString("MMM dd, yyyy HH:mm")</div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-muted small">Lesson Attempted</div>
+                                <div class="font-weight-medium">@(incomplete.LessonDetails ?? "Not specified")</div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-muted small">Outcome</div>
+                                <div class="text-warning font-weight-medium">
+                                    <i class="fas fa-times-circle me-1"></i>@(incomplete.NoOutcomeDetails ?? "Issue reported")
+                                </div>
+                            </div>
+                        </div>
+                        @if (!string.IsNullOrEmpty(incomplete.AdditionalComments))
+                        {
+                            <div class="mt-2 pt-2 border-top">
+                                <div class="text-muted small">Observer Comments</div>
+                                <div class="text-muted">@incomplete.AdditionalComments</div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    <!-- Feedback Content -->
+    <div class="modern-card fade-in">
+        <div class="modern-card-header">
+            <h5 class="modern-card-title">Learning Walk Observation Results</h5>
+            <p class="modern-card-subtitle">Professional feedback on your teaching practice</p>
+        </div>
+        <div class="modern-card-body">
+
+            <!-- Lesson Information -->
+            @if (!string.IsNullOrWhiteSpace(Model.LessonDetails))
+            {
+                <div class="feedback-section">
+                    <div class="section-header">
+                        <h6><i class="fas fa-calendar-alt me-2"></i>Lesson Observed</h6>
+                    </div>
+                    <div class="lesson-info-display">
+                        <div class="lesson-details">
+                            <strong>Lesson:</strong> @Model.LessonDetails
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(Model.ObservationTiming))
+                        {
+                            <div class="observation-timing">
+                                <strong>Part Observed:</strong> 
+                                <span class="timing-badge timing-@Model.ObservationTiming.ToLower()">
+                                    @if (Model.ObservationTiming == "Start")
+                                    {
+                                        <i class="fas fa-play-circle me-1"></i>
+                                    }
+                                    else if (Model.ObservationTiming == "Middle")
+                                    {
+                                        <i class="fas fa-pause-circle me-1"></i>
+                                    }
+                                    else if (Model.ObservationTiming == "End")
+                                    {
+                                        <i class="fas fa-stop-circle me-1"></i>
+                                    }
+                                    @Model.ObservationTiming of Lesson
+                                </span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+            
+            <!-- Learning Walk Outcomes -->
+            @if (!string.IsNullOrWhiteSpace(Model.PlanningSequencing) || !string.IsNullOrWhiteSpace(Model.LearningActivities) ||
+                 !string.IsNullOrWhiteSpace(Model.AssessmentChecks) || !string.IsNullOrWhiteSpace(Model.BehavioursAttitudes))
+            {
+                <div class="feedback-section">
+                    <div class="section-header">
+                        <h6><i class="fas fa-chart-line me-2"></i>Learning Walk Outcomes</h6>
+                    </div>
+                    <div class="outcomes-display">
+                        <table class="table table-bordered outcomes-table-view">
+                            <thead>
+                                <tr>
+                                    <th class="assessment-area">Assessment Area</th>
+                                    <th class="practice-level-result">Practice Level Observed</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (!string.IsNullOrWhiteSpace(Model.PlanningSequencing))
+                                {
+                                    <tr>
+                                        <td class="assessment-area-name">
+                                            <i class="fas fa-tasks me-2 text-primary"></i>
+                                            Planning and Sequencing
+                                        </td>
+                                        <td class="practice-result">
+                                            <span class="practice-badge practice-@Model.PlanningSequencing.ToLower().Replace(" ", "-")">
+                                                @Model.PlanningSequencing
+                                            </span>
+                                        </td>
+                                    </tr>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(Model.LearningActivities))
+                                {
+                                    <tr>
+                                        <td class="assessment-area-name">
+                                            <i class="fas fa-book-open me-2 text-success"></i>
+                                            Learning Activities
+                                        </td>
+                                        <td class="practice-result">
+                                            <span class="practice-badge practice-@Model.LearningActivities.ToLower().Replace(" ", "-")">
+                                                @Model.LearningActivities
+                                            </span>
+                                        </td>
+                                    </tr>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(Model.AssessmentChecks))
+                                {
+                                    <tr>
+                                        <td class="assessment-area-name">
+                                            <i class="fas fa-check-double me-2 text-info"></i>
+                                            Assessment and Learning Checks
+                                        </td>
+                                        <td class="practice-result">
+                                            <span class="practice-badge practice-@Model.AssessmentChecks.ToLower().Replace(" ", "-")">
+                                                @Model.AssessmentChecks
+                                            </span>
+                                        </td>
+                                    </tr>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(Model.BehavioursAttitudes))
+                                {
+                                    <tr>
+                                        <td class="assessment-area-name">
+                                            <i class="fas fa-user-check me-2 text-warning"></i>
+                                            Behaviours and Attitudes
+                                        </td>
+                                        <td class="practice-result">
+                                            <span class="practice-badge practice-@Model.BehavioursAttitudes.ToLower().Replace(" ", "-")">
+                                                @Model.BehavioursAttitudes
+                                            </span>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+
+                        @if (!string.IsNullOrWhiteSpace(Model.BehaviourChecks))
+                        {
+                            var behaviourChecksList = Model.BehaviourChecks.Split(',').Select(b => b.Trim()).ToList();
+                            var behaviourLabels = new Dictionary<string, string>
+                            {
+                                { "arrive_on_time", "Learners arrive on time and/or effectively challenged" },
+                                { "lanyards_worn", "Lanyards worn" },
+                                { "items_removed", "Hats, coats, earphones and bags removed" },
+                                { "phone_silent", "Mobile phone on silent and away (if not being used for learning)" },
+                                { "no_food_drink", "No food or drink" },
+                                { "work_ready", "Work ready - pens, notepads etc" },
+                                { "desks_clear", "Desks clear of bags and non-study items" }
+                            };
+
+                            <div class="behaviours-observed mt-3">
+                                <h6 class="text-muted mb-2">Behaviours and Attitudes Observed (@behaviourChecksList.Count of 7)</h6>
+                                <div class="row">
+                                    @foreach (var behaviour in behaviourChecksList.Where(b => !string.IsNullOrWhiteSpace(b)))
+                                    {
+                                        <div class="col-md-6 mb-2">
+                                            <div class="behaviour-observed-item">
+                                                <i class="fas fa-check-circle text-success me-2"></i>
+                                                @(behaviourLabels.ContainsKey(behaviour) ? behaviourLabels[behaviour] : behaviour)
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+
+            <!-- Observer Feedback -->
+            @if (!string.IsNullOrWhiteSpace(Model.FeedbackText))
+            {
+                <div class="feedback-section">
+                    <div class="section-header">
+                        <h6><i class="fas fa-edit me-2"></i>Observer Feedback</h6>
+                    </div>
+                    <div class="feedback-content">
+                        @Model.FeedbackText
+                    </div>
+                </div>
+            }
+
+            <!-- Teaching Strengths -->
+            @if (!string.IsNullOrWhiteSpace(Model.TeachingStrengths))
+            {
+                <div class="feedback-section">
+                    <div class="section-header">
+                        <h6><i class="fas fa-thumbs-up me-2"></i>Teaching Strengths</h6>
+                    </div>
+                    <div class="feedback-content">
+                        @Model.TeachingStrengths
+                    </div>
+                </div>
+            }
+
+            <!-- Areas for Development -->
+            @if (!string.IsNullOrWhiteSpace(Model.AreasForImprovement))
+            {
+                <div class="feedback-section">
+                    <div class="section-header">
+                        <h6><i class="fas fa-arrow-up me-2"></i>Areas for Development</h6>
+                    </div>
+                    <div class="feedback-content">
+                        @Model.AreasForImprovement
+                    </div>
+                </div>
+            }
+
+            <!-- Student Engagement & Behavior -->
+            @if (!string.IsNullOrWhiteSpace(Model.EngagementLevel) || !string.IsNullOrWhiteSpace(Model.ClassroomBehavior))
+            {
+                <div class="feedback-section">
+                    <div class="section-header">
+                        <h6><i class="fas fa-users me-2"></i>Student Engagement & Behavior</h6>
+                    </div>
+                    <div class="row">
+                        @if (!string.IsNullOrWhiteSpace(Model.EngagementLevel))
+                        {
+                            <div class="col-md-6">
+                                <div class="feedback-item">
+                                    <strong>Student Engagement:</strong> @Model.EngagementLevel
+                                </div>
+                            </div>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(Model.ClassroomBehavior))
+                        {
+                            <div class="col-md-6">
+                                <div class="feedback-item">
+                                    <strong>Classroom Behavior:</strong> @Model.ClassroomBehavior
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+
+            <!-- Support Needed -->
+            @if (!string.IsNullOrWhiteSpace(Model.SupportNeeded))
+            {
+                <div class="feedback-section">
+                    <div class="section-header">
+                        <h6><i class="fas fa-hands-helping me-2"></i>Support & Recommendations</h6>
+                    </div>
+                    <div class="feedback-content">
+                        @Model.SupportNeeded
+                    </div>
+                </div>
+            }
+
+            <!-- Follow-up Required -->
+            @if (Model.FollowUpRequired)
+            {
+                <div class="feedback-section">
+                    <div class="alert alert-info">
+                        <i class="fas fa-calendar-check me-2"></i>
+                        <strong>Follow-up Required:</strong> A follow-up observation has been recommended.
+                    </div>
+                </div>
+            }
+
+            <!-- Additional Comments -->
+            @if (!string.IsNullOrWhiteSpace(Model.AdditionalComments))
+            {
+                <div class="feedback-section">
+                    <div class="section-header">
+                        <h6><i class="fas fa-comment me-2"></i>Additional Comments</h6>
+                    </div>
+                    <div class="feedback-content">
+                        @Model.AdditionalComments
+                    </div>
+                </div>
+            }
+
+            <!-- Action Button -->
+            <div class="text-center mt-4">
+                @if (isAdminView)
+                {
+                    <a asp-area="LearningWalks" asp-controller="Admin" asp-action="Index" class="btn btn-brand btn-modern hover-lift">
+                        <i class="fas fa-arrow-left me-1"></i>Back to Admin Panel
+                    </a>
+                }
+                else
+                {
+                    <a asp-controller="LearningWalks" asp-action="Index" class="btn btn-brand btn-modern hover-lift">
+                        <i class="fas fa-arrow-left me-1"></i>Back to Learning Walks
+                    </a>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Animate cards on load
+            const cards = document.querySelectorAll('.fade-in');
+            cards.forEach((card, index) => {
+                setTimeout(() => {
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, index * 100);
+            });
+        });
+    </script>
+    
+    <style>
+        .fade-in {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s ease;
+        }
+        
+        .feedback-section {
+            margin-bottom: 2rem;
+        }
+        
+        .section-header {
+            border-bottom: 1px solid var(--gray-200);
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+        }
+        
+        .section-header h6 {
+            color: var(--brand-primary);
+            margin-bottom: 0;
+            font-weight: 600;
+        }
+        
+        .feedback-content {
+            background: var(--gray-50);
+            padding: 1rem;
+            border-radius: var(--radius);
+            border-left: 4px solid var(--brand-primary);
+            font-size: 0.95rem;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+        
+        .feedback-item {
+            padding: 0.5rem 0;
+        }
+        
+        .rating-display {
+            text-align: center;
+            margin: 1rem 0;
+        }
+        
+        .rating-badge {
+            display: inline-block;
+            padding: 0.75rem 2rem;
+            border-radius: 50px;
+            font-size: 1.125rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .rating-outstanding {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+        
+        .rating-good {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+        }
+        
+        .rating-satisfactory {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+        }
+        
+        .rating-improvement {
+            background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+            color: white;
+        }
+        
+        .rating-inadequate {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+        }
+        
+        .rating-default {
+            background: var(--gray-500);
+            color: white;
+        }
+        
+        .lesson-info-display {
+            background: var(--brand-primary-subtle);
+            padding: 1rem;
+            border-radius: var(--radius);
+            border-left: 4px solid var(--brand-primary);
+        }
+        
+        .lesson-details {
+            margin-bottom: 0.5rem;
+        }
+        
+        .observation-timing {
+            margin-top: 0.5rem;
+        }
+        
+        .timing-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        
+        .timing-start {
+            background: rgba(16, 185, 129, 0.1);
+            color: #10b981;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+        
+        .timing-middle {
+            background: rgba(245, 158, 11, 0.1);
+            color: #f59e0b;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+        
+        .timing-end {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        /* Incomplete Observation Card Styling */
+        .incomplete-observation-card {
+            background: var(--gray-50);
+            padding: 1rem;
+            border-radius: var(--radius);
+            border-left: 4px solid #ffc107;
+        }
+
+        .incomplete-observation-card:last-child {
+            margin-bottom: 0 !important;
+        }
+
+        .incomplete-observation-card .font-weight-medium {
+            font-weight: 500;
+        }
+
+        /* Learning Walk Outcomes Table */
+        .outcomes-table-view {
+            border-color: var(--gray-200);
+            margin-bottom: 0;
+        }
+
+        .outcomes-table-view thead {
+            background-color: var(--brand-primary-subtle);
+        }
+
+        .outcomes-table-view th {
+            border-color: var(--gray-200);
+            color: var(--brand-primary);
+            font-weight: 600;
+            padding: 1rem;
+        }
+
+        .outcomes-table-view th.assessment-area {
+            text-align: left;
+            width: 50%;
+        }
+
+        .outcomes-table-view th.practice-level-result {
+            text-align: center;
+            width: 50%;
+        }
+
+        .outcomes-table-view td {
+            vertical-align: middle;
+            border-color: var(--gray-200);
+            padding: 1rem;
+        }
+
+        .assessment-area-name {
+            font-weight: 500;
+            color: var(--gray-800);
+        }
+
+        .practice-result {
+            text-align: center;
+        }
+
+        .practice-badge {
+            display: inline-block;
+            padding: 0.5rem 1.5rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .practice-working-towards {
+            background: rgba(245, 158, 11, 0.15);
+            color: #f59e0b;
+            border: 2px solid #f59e0b;
+        }
+
+        .practice-core {
+            background: rgba(59, 130, 246, 0.15);
+            color: #3b82f6;
+            border: 2px solid #3b82f6;
+        }
+
+        .practice-enhanced {
+            background: rgba(16, 185, 129, 0.15);
+            color: #10b981;
+            border: 2px solid #10b981;
+        }
+
+        .practice-expert {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border: 2px solid #059669;
+        }
+
+        /* Behaviours Observed */
+        .behaviours-observed {
+            background: var(--gray-50);
+            padding: 1rem;
+            border-radius: var(--radius);
+            border: 1px solid var(--gray-200);
+        }
+
+        .behaviour-observed-item {
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .outcomes-display {
+            margin-top: 1rem;
+        }
+    </style>
+}

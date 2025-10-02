@@ -1,0 +1,265 @@
+@{
+    ViewData["Title"] = "Staff Sync";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section Styles {
+    <link href="~/css/learning-walks.css" rel="stylesheet" />
+}
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Dashboard" asp-area="">Home</a></li>
+        <li class="breadcrumb-item"><a asp-controller="Admin" asp-action="Index">Learning Walks Admin</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Staff Sync</li>
+    </ol>
+</nav>
+
+<!-- Page Header -->
+<div class="page-header">
+    <div class="container">
+        <h1>Staff Sync Management</h1>
+        <p>Synchronize staff accounts with timetable data</p>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Current Status Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="modern-card text-center">
+                <div class="modern-card-body">
+                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" style="width: 60px; height: 60px;">
+                        <i class="fas fa-users fa-2x"></i>
+                    </div>
+                    <h4 class="mb-1">@ViewBag.TotalUsers</h4>
+                    <p class="text-muted mb-0">Total Users</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="modern-card text-center">
+                <div class="modern-card-body">
+                    <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" style="width: 60px; height: 60px;">
+                        <i class="fas fa-id-badge fa-2x"></i>
+                    </div>
+                    <h4 class="mb-1">@ViewBag.UsersWithStaffRef</h4>
+                    <p class="text-muted mb-0">With Staff Reference</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="modern-card text-center">
+                <div class="modern-card-body">
+                    <div class="bg-info text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" style="width: 60px; height: 60px;">
+                        <i class="fas fa-calendar-alt fa-2x"></i>
+                    </div>
+                    <h4 class="mb-1">
+                        @if (ViewBag.TimetableStaffCount == -1)
+                        {
+                            <span class="text-danger">Error</span>
+                        }
+                        else if (ViewBag.TimetableStaffCount >= 100)
+                        {
+                            @ViewBag.TimetableStaffCount<small>+ (sample)</small>
+                        }
+                        else
+                        {
+                            @ViewBag.TimetableStaffCount
+                        }
+                    </h4>
+                    <p class="text-muted mb-0">
+                        @if (ViewBag.TimetableStaffCount == -1)
+                        {
+                            <span>Connection Failed</span>
+                        }
+                        else
+                        {
+                            <span>Staff in Timetable</span>
+                        }
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sync Information -->
+    <div class="modern-card mb-4">
+        <div class="modern-card-header">
+            <h5 class="modern-card-title">Staff Synchronization</h5>
+            <p class="modern-card-subtitle">Sync user accounts with timetable data from bc_v_full_timetable_2025</p>
+        </div>
+        <div class="modern-card-body">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>How Staff Sync Works:</strong>
+                <ul class="mb-0 mt-2">
+                    <li><strong>New Users:</strong> Creates accounts for staff found in timetable but not in system</li>
+                    <li><strong>Existing Users:</strong> Links existing users to their Staff Reference numbers</li>
+                    <li><strong>Name Updates:</strong> Updates user names if they've changed in the timetable</li>
+                    <li><strong>Email Generation:</strong> Auto-generates emails in format: firstname.lastname@g.bdc.ac.uk</li>
+                </ul>
+            </div>
+
+            <div class="row">
+                <div class="col-md-8">
+                    <h6><i class="fas fa-database me-2"></i>Data Source</h6>
+                    <p class="text-muted mb-3">
+                        The sync process reads from the <code>bc_v_full_timetable_2025</code> table/view, 
+                        using <strong>StaffReference</strong> as the unique identifier and <strong>StaffName</strong> for display names.
+                    </p>
+                    
+                    <h6><i class="fas fa-shield-alt me-2"></i>Safety Features</h6>
+                    <ul class="text-muted mb-0">
+                        <li>No existing data is deleted</li>
+                        <li>Duplicate staff references are handled safely</li>
+                        <li>Detailed logging of all operations</li>
+                        <li>Rollback capability through standard database recovery</li>
+                    </ul>
+                </div>
+                <div class="col-md-4">
+                    <div class="bg-light p-3 rounded">
+                        <h6 class="mb-3"><i class="fas fa-sync-alt me-2"></i>Sync Actions</h6>
+                        <form asp-action="SyncStaffFromTimetable" method="post" onsubmit="return confirmSync()">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-brand btn-modern w-100 mb-2">
+                                <i class="fas fa-sync-alt me-1"></i>
+                                Run Staff Sync
+                            </button>
+                        </form>
+                        
+                        <a asp-action="Index" class="btn btn-outline-secondary btn-modern w-100">
+                            <i class="fas fa-arrow-left me-1"></i>
+                            Back to Admin
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity Log (if available) -->
+    <div class="modern-card">
+        <div class="modern-card-header">
+            <h5 class="modern-card-title">Sync Guidelines</h5>
+        </div>
+        <div class="modern-card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6><i class="fas fa-check-circle text-success me-2"></i>Before Running Sync</h6>
+                    <ul class="text-muted">
+                        <li>Ensure timetable data is current and accurate</li>
+                        <li>Backup database if this is a production environment</li>
+                        <li>Check that Staff Reference numbers are unique in timetable</li>
+                        <li>Verify staff names are formatted correctly</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h6><i class="fas fa-exclamation-triangle text-warning me-2"></i>Important Notes</h6>
+                    <ul class="text-muted">
+                        <li>Sync should be run regularly to keep data current</li>
+                        <li>New users will need to set their passwords on first login</li>
+                        <li>Observer permissions must be set manually after sync</li>
+                        <li>Email addresses follow standard college format</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function confirmSync() {
+            return confirm('Are you sure you want to run the staff sync? This will create new user accounts and update existing ones based on timetable data.\n\nThis action cannot be easily undone.');
+        }
+        
+        // Show loading state when sync button is clicked
+        document.addEventListener('DOMContentLoaded', function() {
+            const syncForm = document.querySelector('form[action*="SyncStaffFromTimetable"]');
+            if (syncForm) {
+                syncForm.addEventListener('submit', function() {
+                    const button = this.querySelector('button[type="submit"]');
+                    button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Syncing...';
+                    button.disabled = true;
+                });
+            }
+        });
+    </script>
+    
+    <style>
+        .modern-card {
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            transition: all 0.2s ease;
+        }
+        
+        .modern-card-header {
+            background: var(--gray-50);
+            border-bottom: 1px solid var(--gray-200);
+            padding: 1.5rem;
+            border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+        }
+        
+        .modern-card-title {
+            margin: 0;
+            font-weight: 600;
+            color: var(--gray-800);
+        }
+        
+        .modern-card-subtitle {
+            margin: 0.25rem 0 0 0;
+            color: var(--gray-600);
+            font-size: 0.9rem;
+        }
+        
+        .modern-card-body {
+            padding: 1.5rem;
+        }
+        
+        .btn-modern {
+            border-radius: var(--radius);
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-brand {
+            background: var(--brand-primary);
+            border-color: var(--brand-primary);
+            color: white;
+        }
+        
+        .btn-brand:hover {
+            background: var(--brand-primary-dark);
+            border-color: var(--brand-primary-dark);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .alert {
+            border-radius: var(--radius);
+        }
+        
+        code {
+            background: var(--gray-100);
+            padding: 0.125rem 0.25rem;
+            border-radius: 0.25rem;
+            font-size: 0.875em;
+        }
+        
+        :root {
+            --brand-primary: #2563eb;
+            --brand-primary-dark: #1d4ed8;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-600: #4b5563;
+            --gray-800: #1f2937;
+            --radius: 0.5rem;
+            --radius-lg: 0.75rem;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+    </style>
+}

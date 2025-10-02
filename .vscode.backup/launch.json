@@ -1,0 +1,61 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "C#: InfoPoint [https]",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/bin/Debug/net8.0/InfoPoint.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "console": "internalConsole",
+            "stopAtEntry": false,
+            "launchSettingsProfile": "InfoPoint",
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "ASPNETCORE_URLS": "https://localhost:7215;http://localhost:5167"
+            },
+            "serverReadyAction": {
+                "action": "openExternally",
+                "pattern": "\\bNow listening on:\\s+(https?://\\S+)"
+            }
+        },
+        {
+            "name": ".NET 8 Web App",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build-net8",
+            "program": "${workspaceFolder}/bin/Debug/net8.0/InfoPoint.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "console": "internalConsole",
+            "stopAtEntry": false,
+            "launchSettingsProfile": "http",
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "ASPNETCORE_URLS": "http://localhost:5050;https://localhost:5051"
+            },
+            "serverReadyAction": {
+                "action": "openExternally",
+                "pattern": "\\bNow listening on:\\s+(https?://\\S+)"
+            }
+        },
+        {
+            "name": ".NET 8 (Terminal)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build-net8",
+            "program": "/opt/homebrew/opt/dotnet@8/bin/dotnet",
+            "args": ["${workspaceFolder}/bin/Debug/net8.0/InfoPoint.dll"],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "ASPNETCORE_URLS": "http://localhost:5050;https://localhost:5051",
+                "DOTNET_ROOT": "/opt/homebrew/opt/dotnet@8/libexec"
+            }
+        }
+    ]
+}

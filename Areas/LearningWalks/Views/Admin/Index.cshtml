@@ -1,0 +1,501 @@
+@model IEnumerable<InfoPoint.Areas.LearningWalks.Models.LearningWalkAssignment>
+
+@{
+    ViewData["Title"] = "Learning Walk Assignments";
+}
+
+@section Styles {
+    <link href="~/css/learning-walks.css" rel="stylesheet" />
+}
+
+<!-- Page Header -->
+<div class="page-header">
+    <div class="container">
+        <h1>Learning Walk Management</h1>
+        <p>Streamlined observation scheduling and staff development tracking</p>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Alerts -->
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-modern fade-in">
+            <strong>Success!</strong> @TempData["Success"]
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-modern fade-in">
+            <strong>Error!</strong> @TempData["Error"]
+        </div>
+    }
+
+    <!-- Action Buttons at Top -->
+    <div class="d-flex gap-2 mb-4">
+        <a asp-action="ManageObservers" class="btn btn-outline-brand btn-modern hover-lift">
+            <i class="fas fa-users me-1"></i> Manage Observers
+        </a>
+        <a asp-action="StaffSync" class="btn btn-outline-info btn-modern hover-lift">
+            <i class="fas fa-sync-alt me-1"></i> Staff Sync
+        </a>
+        <a asp-action="Create" asp-route-term="@ViewBag.CurrentTerm" asp-route-observerId="@ViewBag.CurrentObserverId" asp-route-searchStaff="@ViewBag.SearchStaff" class="btn btn-brand btn-modern hover-lift">
+            <i class="fas fa-plus me-1"></i> Create Assignment
+        </a>
+        <a asp-action="BulkAssign" asp-route-term="@ViewBag.CurrentTerm" asp-route-observerId="@ViewBag.CurrentObserverId" asp-route-searchStaff="@ViewBag.SearchStaff" class="btn btn-outline-brand btn-modern hover-lift">
+            <i class="fas fa-layer-group me-1"></i> Bulk Assign
+        </a>
+    </div>
+
+    <!-- Term Controls -->
+    <div class="modern-card mb-4 fade-in">
+        <div class="modern-card-body">
+            <!-- Term Selection -->
+            <div class="row align-items-center mb-4">
+                <div class="col-lg-8">
+                    <h5 class="modern-card-title">Academic Terms</h5>
+                    <div class="term-selector">
+                        @for (int i = 1; i <= 3; i++)
+                        {
+                            var termWindows = (List<InfoPoint.Areas.LearningWalks.Models.TermWindow>)ViewBag.TermWindows;
+                            var termWindow = termWindows.FirstOrDefault(t => t.Term == i);
+                            var isActive = termWindow?.IsActive ?? false;
+                            var isCurrentTerm = ViewBag.CurrentTerm == i;
+
+                            <a asp-action="Index"
+                               asp-route-term="@i"
+                               class="term-btn @(isCurrentTerm ? "active" : "")">
+                                Term @i
+                                @if (isActive)
+                                {
+                                    <span class="live-badge">Live</span>
+                                }
+                            </a>
+                        }
+                    </div>
+                </div>
+                <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
+                    @{
+                        var termWindowsList = (List<InfoPoint.Areas.LearningWalks.Models.TermWindow>)ViewBag.TermWindows;
+                        var currentTermWindow = termWindowsList.FirstOrDefault(t => t.Term == ViewBag.CurrentTerm);
+                        var isCurrentTermActive = currentTermWindow?.IsActive ?? false;
+                    }
+                    <form asp-action="ToggleTermWindow" method="post" class="d-inline">
+                        <input type="hidden" name="termNumber" value="@ViewBag.CurrentTerm" />
+                        <input type="hidden" name="activate" value="@(!isCurrentTermActive)" />
+                        <button type="submit" class="btn @(isCurrentTermActive ? "btn-warning" : "btn-brand") btn-modern">
+                            @(isCurrentTermActive ? "Deactivate" : "Activate") Term @ViewBag.CurrentTerm
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Term Date Range Configuration -->
+            <div class="term-date-config">
+                <h6 class="mb-3">
+                    <i class="fas fa-calendar-alt me-2"></i>Term @ViewBag.CurrentTerm Learning Walk Window
+                </h6>
+                <form asp-action="UpdateTermDates" method="post" class="row g-3">
+                    <input type="hidden" name="termNumber" value="@ViewBag.CurrentTerm" />
+
+                    <div class="col-md-5">
+                        <label for="startDate" class="form-label form-label-modern">Start Date</label>
+                        <input type="date" name="startDate" id="startDate"
+                               class="form-control form-control-modern"
+                               value="@currentTermWindow?.StartDate?.ToString("yyyy-MM-dd")" />
+                    </div>
+
+                    <div class="col-md-5">
+                        <label for="endDate" class="form-label form-label-modern">End Date</label>
+                        <input type="date" name="endDate" id="endDate"
+                               class="form-control form-control-modern"
+                               value="@currentTermWindow?.EndDate?.ToString("yyyy-MM-dd")" />
+                    </div>
+
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-brand btn-modern w-100">
+                            <i class="fas fa-save me-1"></i>Save Dates
+                        </button>
+                    </div>
+                </form>
+
+                @if (currentTermWindow?.StartDate != null && currentTermWindow?.EndDate != null)
+                {
+                    <div class="alert alert-info mt-3 mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Current Window:</strong>
+                        @currentTermWindow.StartDate.Value.ToString("MMM dd, yyyy") to @currentTermWindow.EndDate.Value.ToString("MMM dd, yyyy")
+                        (@((currentTermWindow.EndDate.Value - currentTermWindow.StartDate.Value).Days) days)
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-warning mt-3 mb-0">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>No dates set:</strong> Please configure the learning walk window dates for this term.
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-section fade-in">
+        <form method="get" asp-action="Index" class="row g-3">
+            <input type="hidden" name="term" value="@ViewBag.CurrentTerm" />
+            
+            <div class="col-md-4">
+                <label for="observerId" class="form-label form-label-modern">Filter by Observer</label>
+                <select name="observerId" id="observerId" class="form-select form-control-modern" asp-items="ViewBag.ObserverList">
+                    <option value="">All Observers</option>
+                </select>
+            </div>
+            
+            <div class="col-md-4">
+                <label for="searchStaff" class="form-label form-label-modern">Search Staff Member</label>
+                <input type="text" name="searchStaff" id="searchStaff" class="form-control form-control-modern" 
+                       value="@ViewBag.SearchStaff" placeholder="Search by name or email...">
+            </div>
+            
+            <div class="col-md-4 d-flex align-items-end">
+                <button type="submit" class="btn btn-brand btn-modern me-2">Apply Filters</button>
+                @if (!string.IsNullOrEmpty(ViewBag.CurrentObserverId) || !string.IsNullOrEmpty(ViewBag.SearchStaff))
+                {
+                    <a asp-action="Index" asp-route-term="@ViewBag.CurrentTerm" class="btn btn-outline-secondary btn-modern">Clear</a>
+                }
+            </div>
+        </form>
+        
+        @if (!string.IsNullOrEmpty(ViewBag.CurrentObserverId) || !string.IsNullOrEmpty(ViewBag.SearchStaff))
+        {
+            <div class="filter-tags">
+                @if (!string.IsNullOrEmpty(ViewBag.CurrentObserverId))
+                {
+                    var selectedObserver = ((SelectList)ViewBag.ObserverList).FirstOrDefault(x => x.Value == ViewBag.CurrentObserverId);
+                    if (selectedObserver != null)
+                    {
+                        <span class="filter-tag">Observer: @selectedObserver.Text</span>
+                    }
+                }
+                @if (!string.IsNullOrEmpty(ViewBag.SearchStaff))
+                {
+                    <span class="filter-tag">Search: @ViewBag.SearchStaff</span>
+                }
+            </div>
+        }
+    </div>
+
+
+    <!-- Staff Overview -->
+    <div class="modern-card fade-in">
+        <div class="modern-card-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="modern-card-title">Staff Overview</h5>
+                    <p class="modern-card-subtitle">Manage learning walk assignments and observer roles</p>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">@((ViewBag.StaffWithAssignments as IEnumerable<dynamic>)?.Count() ?? 0)</div>
+                    <div class="stat-label">Staff Members</div>
+                </div>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-modern mb-0">
+                <thead>
+                    <tr>
+                        <th>Staff Member</th>
+                        <th>Observer</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                        <th style="width: 80px;">Settings</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        var staffWithAssignments = ViewBag.StaffWithAssignments as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
+                    }
+                    @foreach (var item in staffWithAssignments)
+                    {
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="me-2">
+                                        <div class="bg-gray-100 text-gray-600 rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; font-size: 0.875rem; font-weight: 500;">
+                                            @{
+                                                var fullName = item.User?.FullName?.ToString() ?? "";
+                                                var initial = !string.IsNullOrEmpty(fullName) ? fullName[0] : 'U';
+                                            }
+                                            @initial
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="font-weight-medium">@item.User.FullName</div>
+                                        <div class="text-muted small">@item.User.Email</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                @if (item.Assignment != null)
+                                {
+                                    <span class="text-success font-weight-medium">@item.Assignment.Observer.FullName</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted font-italic">Not yet assigned</span>
+                                }
+                            </td>
+                            <td>
+                                @if (item.Assignment != null)
+                                {
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div>
+                                            @if (item.HasCompleted)
+                                            {
+                                                <div>
+                                                    <span class="badge bg-success">
+                                                        <i class="fas fa-check-circle me-1"></i>Completed
+                                                    </span>
+                                                </div>
+                                                @if (item.IncompleteCount > 0)
+                                                {
+                                                    <div class="text-muted small mt-1">
+                                                        @item.IncompleteCount failed attempt@(item.IncompleteCount > 1 ? "s" : "")
+                                                    </div>
+                                                }
+                                            }
+                                            else if (item.IncompleteCount > 0)
+                                            {
+                                                <div>
+                                                    <span class="badge bg-warning">
+                                                        <i class="fas fa-exclamation-circle me-1"></i>Incomplete
+                                                    </span>
+                                                </div>
+                                                <div class="text-muted small mt-1">
+                                                    @item.IncompleteCount failed attempt@(item.IncompleteCount > 1 ? "s" : "")
+                                                </div>
+                                            }
+                                            else if (item.Assignment.IsActive)
+                                            {
+                                                <span class="badge bg-secondary">
+                                                    <i class="fas fa-clock me-1"></i>Pending
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary">
+                                                    <i class="fas fa-ban me-1"></i>Disabled
+                                                </span>
+                                            }
+                                        </div>
+                                        @if (item.HasCompleted)
+                                        {
+                                            <a asp-controller="Admin" asp-action="ViewFeedback" asp-route-id="@item.Assignment.Id" class="btn btn-sm btn-outline-primary hover-lift">
+                                                <i class="fas fa-eye me-1"></i>View
+                                            </a>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span class="text-muted font-italic">-</span>
+                                }
+                            </td>
+                            <td>
+                                <div class="action-group">
+                                    <form asp-action="ChangeObserver" method="post" class="d-inline-flex align-items-center">
+                                        <input type="hidden" name="staffId" value="@item.User.Id" />
+                                        <input type="hidden" name="currentTerm" value="@ViewBag.CurrentTerm" />
+                                        <input type="hidden" name="observerId" value="@ViewBag.CurrentObserverId" />
+                                        <input type="hidden" name="searchStaff" value="@ViewBag.SearchStaff" />
+                                        <select name="newObserverId" class="form-select form-select-sm me-2" style="width: 140px;">
+                                            <option value="">Select Observer</option>
+                                            @foreach (var observer in ViewBag.ObserverList)
+                                            {
+                                                if (observer.Value != item.User.Id)
+                                                {
+                                                    <option value="@observer.Value" selected="@(item.Assignment?.ObserverId == observer.Value)">
+                                                        @observer.Text
+                                                    </option>
+                                                }
+                                            }
+                                        </select>
+                                        <button type="submit" class="btn btn-outline-brand btn-sm">
+                                            @(item.Assignment != null ? "Change" : "Assign")
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="dropdown">
+                                    <button class="btn btn-link btn-sm p-1" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        @if (item.User.IsObserver)
+                                        {
+                                            <li>
+                                                <form asp-action="ToggleObserver" method="post" class="mb-0">
+                                                    <input type="hidden" name="userId" value="@item.User.Id" />
+                                                    <input type="hidden" name="makeObserver" value="false" />
+                                                    <input type="hidden" name="term" value="@ViewBag.CurrentTerm" />
+                                                    <input type="hidden" name="observerId" value="@ViewBag.CurrentObserverId" />
+                                                    <input type="hidden" name="searchStaff" value="@ViewBag.SearchStaff" />
+                                                    <button type="submit" class="dropdown-item">
+                                                        <i class="fas fa-user-times me-2"></i>Remove Observer Role
+                                                    </button>
+                                                </form>
+                                            </li>
+                                        }
+                                        else
+                                        {
+                                            <li>
+                                                <form asp-action="ToggleObserver" method="post" class="mb-0">
+                                                    <input type="hidden" name="userId" value="@item.User.Id" />
+                                                    <input type="hidden" name="makeObserver" value="true" />
+                                                    <input type="hidden" name="term" value="@ViewBag.CurrentTerm" />
+                                                    <input type="hidden" name="observerId" value="@ViewBag.CurrentObserverId" />
+                                                    <input type="hidden" name="searchStaff" value="@ViewBag.SearchStaff" />
+                                                    <button type="submit" class="dropdown-item">
+                                                        <i class="fas fa-user-plus me-2"></i>Make Observer
+                                                    </button>
+                                                </form>
+                                            </li>
+                                        }
+                                        @if (item.Assignment != null)
+                                        {
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li>
+                                                <form asp-action="ToggleLearningWalk" method="post" class="mb-0">
+                                                    <input type="hidden" name="staffId" value="@item.User.Id" />
+                                                    <input type="hidden" name="enable" value="@(!item.Assignment.IsActive)" />
+                                                    <input type="hidden" name="currentTerm" value="@ViewBag.CurrentTerm" />
+                                                    <input type="hidden" name="observerId" value="@ViewBag.CurrentObserverId" />
+                                                    <input type="hidden" name="searchStaff" value="@ViewBag.SearchStaff" />
+                                                    <button type="submit" class="dropdown-item">
+                                                        @if (item.Assignment.IsActive)
+                                                        {
+                                                            <i class="fas fa-toggle-off me-2"></i>@:Disable Learning Walk
+                                                        }
+                                                        else
+                                                        {
+                                                            <i class="fas fa-toggle-on me-2"></i>@:Enable Learning Walk
+                                                        }
+                                                    </button>
+                                                </form>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item text-danger" asp-action="Delete" asp-route-id="@item.Assignment.Id">
+                                                    <i class="fas fa-trash me-2"></i>Remove Assignment
+                                                </a>
+                                            </li>
+                                        }
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Add smooth animations
+        document.addEventListener('DOMContentLoaded', function() {
+            // Animate cards on load
+            const cards = document.querySelectorAll('.fade-in');
+            cards.forEach((card, index) => {
+                setTimeout(() => {
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, index * 100);
+            });
+            
+            // Add loading states to forms
+            const forms = document.querySelectorAll('form');
+            forms.forEach(form => {
+                form.addEventListener('submit', function() {
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    if (submitBtn) {
+                        submitBtn.disabled = true;
+                        submitBtn.classList.add('loading');
+                        setTimeout(() => {
+                            submitBtn.disabled = false;
+                            submitBtn.classList.remove('loading');
+                        }, 2000);
+                    }
+                });
+            });
+        });
+    </script>
+    
+    <style>
+        .fade-in {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s ease;
+        }
+        
+        .bg-brand-primary {
+            background-color: var(--brand-primary) !important;
+        }
+        
+        .bg-gray-100 {
+            background-color: var(--gray-100) !important;
+        }
+        
+        .text-gray-600 {
+            color: var(--gray-600) !important;
+        }
+        
+        .font-weight-medium {
+            font-weight: 500;
+        }
+        
+        .font-italic {
+            font-style: italic;
+        }
+        
+        .dropdown-toggle::after {
+            display: none;
+        }
+        
+        .btn-link {
+            color: var(--gray-600);
+            text-decoration: none;
+        }
+        
+        .btn-link:hover {
+            color: var(--brand-primary);
+        }
+        
+        .dropdown-item {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+        }
+        
+        .dropdown-item:hover {
+            background-color: var(--brand-primary-subtle);
+            color: var(--brand-primary);
+        }
+        
+        .dropdown-item.text-danger:hover {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+        }
+
+        .term-date-config {
+            border-top: 1px solid var(--gray-200);
+            padding-top: 1.5rem;
+        }
+
+        .term-date-config h6 {
+            color: var(--brand-primary);
+            font-weight: 600;
+        }
+    </style>
+}
